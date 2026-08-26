@@ -73,22 +73,12 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM books")
     if cursor.fetchone()[0] == 0:
         seed_books = [
-            ("Physics for Scientists and Engineers", "Raymond Serway", "Science", "Section A, Shelf 3", 1, "Comprehensive intro physics textbook covering mechanics and electromagnetism."),
-            ("Calculus: Early Transcendentals", "James Stewart", "Mathematics", "Section B, Shelf 1", 0, "Standard calculus textbook with limits, derivatives, and integrals."),
-            ("Computer Science & Data Structures", "Mark Weiss", "Technology", "Section C, Shelf 4", 1, "Algorithms, data structures, and computational thinking using Python and C++."),
-            ("World History: The Modern Era", "Elisabeth Gaynor", "History", "Section D, Shelf 2", 1, "Global modern history from the 15th century to present day."),
-            ("Organic Chemistry", "Paula Yurkanis Bruice", "Science", "Section A, Shelf 5", 1, "Reaction mechanisms, molecular structure, and synthesis."),
-            ("Introduction to Algorithms", "Thomas H. Cormen", "Technology", "Section C, Shelf 2", 1, "Comprehensive reference for algorithms and analytical techniques."),
-            ("English Literature & Poetry", "Norton Anthology", "Humanities", "Section E, Shelf 1", 0, "Selected classic poems, essays, and dramatic works."),
-            ("Explain gravity to a 10-year-old", "Science Explainers", "Science", "Section A, Shelf 1", 1, "Gravity is like an invisible glue or magnet that keeps our feet on the ground and prevents the Earth from floating away."),
-            ("Einstein General Relativity vs Newton Gravity", "Albert & Isaac", "Science", "Section A, Shelf 2", 1, "Newton viewed gravity as an instantaneous pull force between masses, while Einstein proved that gravity is the bending of spacetime caused by mass and energy."),
-            ("Einstein Field Equations Explained", "General Relativity Team", "Science", "Section A, Shelf 4", 1, "Space tells matter how to move, matter tells space how to curve. Spacetime curvature is directly proportional to mass and energy density."),
-            ("Rogue Planet Gravity Fluctuations", "Sci-Fi Writer Collective", "Sci-Fi", "Section F, Shelf 1", 1, "A sci-fi story about a rogue planet passing near Earth, causing localized gravity fluctuations that change daily, allowing floating and jumping to extreme heights."),
-            ("Astronaut Zero-Gravity Habitat Routine", "NASA Resident Log", "Sci-Fi", "Section F, Shelf 2", 1, "The daily routine and physical sensations of living in zero-g for six months: drinking floating water droplets and feeling weightless."),
-            ("Moons of Gravity Fantasy Setting", "Worldbuilder Outline", "Sci-Fi", "Section F, Shelf 3", 1, "A worldbuilding outline for a fantasy setting where gravity strength is tied directly to the phases of three different moons."),
-            ("Orbital Changes of 50% Sun Gravity", "Astrophysics Lab Report", "Science", "Section A, Shelf 6", 1, "If the sun's gravity dropped by 50%, all planets would move into wider, highly eccentric elliptical orbits or escape the solar system entirely."),
-            ("Gravitational Lensing and Dark Matter", "Astronomer Guidebook", "Science", "Section A, Shelf 7", 1, "Gravitational lensing bends light around massive objects, allowing astronomers to map invisible dark matter and find distant exoplanets."),
-            ("Supermassive Black Hole Singularity Journey", "Theoretical Physics Group", "Science", "Section A, Shelf 8", 1, "An object falling into a black hole experiences extreme tidal force stretching (spaghettification) at the event horizon before hitting the singularity.")
+            ("Air Conditioner Deep Clean", "Marcus Vance (HVAC Expert)", "HVAC", "Downtown Zone", 1, "Full dismantle, washing, filter replacement, and coolant pressure check."),
+            ("Emergency Pipe Leak Repair", "Sarah Jenkins (Plumbing Lead)", "Plumbing", "Metro West", 1, "Locates and seals indoor/outdoor pipe bursts and repairs drainage leaks."),
+            ("Smart Thermostat & IoT Setup", "Dave Miller (Smart Home Tech)", "Electrical", "Northside & East", 1, "Installs Nest or Ecobee smart thermostats and configures mobile automation."),
+            ("Full House Deep Cleaning", "Apex Green Cleaning Crew", "Cleaning", "All Zones", 1, "Eco-friendly sanitization of bathrooms, kitchens, living rooms, and windows."),
+            ("Main Panel Electrical Upgrade", "Tom Harris (Master Electrician)", "Electrical", "Downtown Zone", 0, "Replaces old fuse boxes with modern electrical panels to support solar/EV."),
+            ("Reheater & Appliance Diagnostic", "Marcus Vance (Appliance Pro)", "Appliances", "West Zone", 1, "Troubleshooting dryer heating, washer tumbling, and refrigerator coolant issues.")
         ]
         cursor.executemany("""
             INSERT INTO books (title, author, category, shelf_location, available, description)
@@ -100,16 +90,17 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM customers")
     if cursor.fetchone()[0] == 0:
         seed_customers = [
-            ("Alex Johnson", "+15551234567", "Physics", "Not Called", None),
-            ("Maria Garcia", "+15559876543", "Calculus", "Not Called", None),
-            ("David Smith", "+15552468101", "Computer Science", "Not Called", None),
-            ("Sarah Lee", "+15553692580", "World History", "Not Called", None)
+            ("Alex Johnson", "+15551234567", "Air Conditioner", "Not Called", None),
+            ("Maria Garcia", "+15559876543", "Leak Repair", "Not Called", None),
+            ("David Smith", "+15552468101", "Thermostat", "Not Called", None),
+            ("Sarah Lee", "+15553692580", "House Cleaning", "Not Called", None)
         ]
         cursor.executemany("""
             INSERT INTO customers (name, phone, interested_topic, last_call_status, last_called_at)
             VALUES (?, ?, ?, ?, ?)
         """, seed_customers)
         conn.commit()
+
 
 
     conn.close()
@@ -250,7 +241,7 @@ def voice_entry():
             speech_timeout="auto",
             timeout=5
         )
-        gather.say("Welcome to the automated school library locator. Please say the title or subject of the book you are looking for.", voice="alice")
+        gather.say("Welcome to Apex Home Services. Please say the service, repair, or maintenance job you need help with.", voice="alice")
         response.append(gather)
         
         # Fallback if caller says nothing
@@ -262,7 +253,7 @@ def voice_entry():
         xml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Gather input="speech" action="/handle-speech" method="POST" speechTimeout="auto" timeout="5">
-        <Say voice="alice">Welcome to the automated school library locator. Please say the title or subject of the book you are looking for.</Say>
+        <Say voice="alice">Welcome to Apex Home Services. Please say the service, repair, or maintenance job you need help with.</Say>
     </Gather>
     <Say voice="alice">We did not hear any speech input. Please call back when ready. Goodbye.</Say>
     <Hangup/>
@@ -292,21 +283,22 @@ def handle_speech():
         if best_match:
             title = best_match["title"]
             location = best_match["shelf_location"]
-            avail = "currently available for checkout" if best_match["available"] == 1 else "currently checked out"
-            say_text = f"We found {title}. It is located at {location}, and is {avail}."
+            avail = "available for booking today" if best_match["available"] == 1 else "currently fully booked"
+            say_text = f"We found {title}. It is covered in {location}, and is {avail}."
         else:
-            say_text = f"Sorry, we could not find any records matching {transcription} in our school library database."
+            say_text = f"Sorry, we could not find any service records matching {transcription} in our service catalog."
     else:
         say_text = "Sorry, we could not process your speech input."
         log_call("Twilio Voice", caller_number, "[No Speech Detected]", None)
         
-    say_text += " Thank you for calling the school info system. Goodbye."
+    say_text += " Thank you for calling Apex Home Services. Goodbye."
     
     if TWILIO_AVAILABLE:
         response = VoiceResponse()
         response.say(say_text, voice="alice")
         response.hangup()
         return Response(str(response), mimetype="text/xml")
+
     else:
         xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -332,9 +324,9 @@ def sms_webhook():
     log_call("Twilio SMS", caller_number, message_body, best_match)
     
     if best_match:
-        reply_text = f"📚 Library Search:\nFound: {best_match['title']}\nLocation: {best_match['shelf_location']}\nStatus: {'Available' if best_match['available'] == 1 else 'Checked Out'}"
+        reply_text = f"🛠️ Apex Home Services:\nFound: {best_match['title']}\nArea: {best_match['shelf_location']}\nStatus: {'Available Today' if best_match['available'] == 1 else 'Fully Booked'}"
     else:
-        reply_text = f"📚 Library Search:\nNo books found matching '{message_body}'. Please check spelling or try another keyword."
+        reply_text = f"🛠️ Apex Home Services:\nNo service matches found for '{message_body}'. Please reply with a service category like HVAC, Plumbing, or Electrical."
         
     if TWILIO_AVAILABLE:
         resp = MessagingResponse()
@@ -358,7 +350,7 @@ def outbound_greeting():
     customer_name = request.args.get("name", "Customer")
     topic = request.args.get("topic", "your inquiry")
     
-    greeting = f"Hello {customer_name}! This is an automated call regarding {topic}. Please say the title or subject of the book you are looking for."
+    greeting = f"Hello {customer_name}! This is an automated follow-up call from Apex Home Services regarding your request for {topic}. Please say the specific service details you would like to ask about."
     
     if TWILIO_AVAILABLE:
         response = VoiceResponse()
@@ -384,6 +376,7 @@ def outbound_greeting():
     <Hangup/>
 </Response>"""
         return Response(xml_content, mimetype="text/xml")
+
 
 
 
