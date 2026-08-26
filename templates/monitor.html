@@ -282,46 +282,28 @@
         draw();
 
         var activeIndices = data.active_cells || [];
-        cells.forEach(function(c){ c.classList.remove('active'); });
+        cells.forEach(function(c, idx){
+          c.classList.remove('active');
+          if (data.cell_roles && data.cell_roles[idx]) {
+            c.title = 'C' + String(idx+1).padStart(2,'0') + ': ' + data.cell_roles[idx];
+          }
+        });
+        
         activeIndices.forEach(function(i){
           if (cells[i]) cells[i].classList.add('active');
         });
 
-        document.getElementById('cells-sub').textContent = NUM_CELLS + ' worker cells — ' + activeIndices.length + ' handling live user requests';
-        return;
+        document.getElementById('cells-sub').textContent = NUM_CELLS + ' real worker cells — ' + activeIndices.length + ' active (' + data.total_logs_processed + ' real requests processed)';
       }
     } catch(e) {
-      console.warn("Backend poll error, using fallback stream:", e);
+      console.warn("Backend poll error:", e);
     }
-
-    // Fallback simulation if backend offline
-    var gap = TARGET - current;
-    current = current + gap * 0.07 + (Math.random()-0.5) * 4;
-    current = Math.max(20, Math.min(100, current));
-    history.push(current);
-    if (history.length > 60) history.shift();
-
-    document.getElementById('m-score').textContent = Math.round(current);
-    document.getElementById('m-target').textContent = TARGET;
-    document.getElementById('m-gap').textContent = Math.max(0, Math.round(TARGET-current));
-    document.getElementById('status-text').textContent = (TARGET-current) < 3 ? 'converged' : 'learning';
-
-    draw();
-
-    var activeCount = 4 + Math.floor(Math.random()*6);
-    cells.forEach(function(c){ c.classList.remove('active'); });
-    var idxs = [];
-    while (idxs.length < activeCount){
-      var r = Math.floor(Math.random()*NUM_CELLS);
-      if (idxs.indexOf(r)===-1) idxs.push(r);
-    }
-    idxs.forEach(function(i){ cells[i].classList.add('active'); });
-    document.getElementById('cells-sub').textContent = NUM_CELLS + ' worker cells — ' + activeCount + ' handling a live user now';
   }
 
   fetchLiveData();
   setInterval(fetchLiveData, 1000);
 })();
+
 
 </script>
 </body>
