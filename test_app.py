@@ -87,5 +87,19 @@ class VoiceLocatorTestCase(unittest.TestCase):
         data = res.get_json()
         self.assertTrue(data['success'])
 
+    def test_11_convergence_monitor(self):
+        """Test Worker Cells Convergence Monitor route and telemetry API."""
+        res = self.client.get('/monitor')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'Worker cells', res.data)
+        
+        api_res = self.client.get('/api/convergence-metrics')
+        self.assertEqual(api_res.status_code, 200)
+        data = api_res.get_json()
+        self.assertTrue(data['success'])
+        self.assertIn('current_score', data)
+        self.assertIn('active_cells', data)
+
 if __name__ == '__main__':
     unittest.main()
+
