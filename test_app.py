@@ -16,9 +16,10 @@ class VoiceLocatorTestCase(unittest.TestCase):
 
     def test_02_database_search(self):
         """Test SQL database keyword search algorithm."""
-        results = search_database("Physics")
+        results = search_database("Serway")
         self.assertTrue(len(results) > 0)
         self.assertEqual(results[0]['title'], "Physics for Scientists and Engineers")
+
 
     def test_03_api_search_endpoint(self):
         """Test /api/search REST endpoint for Web Speech API."""

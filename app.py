@@ -79,7 +79,16 @@ def init_db():
             ("World History: The Modern Era", "Elisabeth Gaynor", "History", "Section D, Shelf 2", 1, "Global modern history from the 15th century to present day."),
             ("Organic Chemistry", "Paula Yurkanis Bruice", "Science", "Section A, Shelf 5", 1, "Reaction mechanisms, molecular structure, and synthesis."),
             ("Introduction to Algorithms", "Thomas H. Cormen", "Technology", "Section C, Shelf 2", 1, "Comprehensive reference for algorithms and analytical techniques."),
-            ("English Literature & Poetry", "Norton Anthology", "Humanities", "Section E, Shelf 1", 0, "Selected classic poems, essays, and dramatic works.")
+            ("English Literature & Poetry", "Norton Anthology", "Humanities", "Section E, Shelf 1", 0, "Selected classic poems, essays, and dramatic works."),
+            ("Explain gravity to a 10-year-old", "Science Explainers", "Science", "Section A, Shelf 1", 1, "Gravity is like an invisible glue or magnet that keeps our feet on the ground and prevents the Earth from floating away."),
+            ("Einstein General Relativity vs Newton Gravity", "Albert & Isaac", "Science", "Section A, Shelf 2", 1, "Newton viewed gravity as an instantaneous pull force between masses, while Einstein proved that gravity is the bending of spacetime caused by mass and energy."),
+            ("Einstein Field Equations Explained", "General Relativity Team", "Science", "Section A, Shelf 4", 1, "Space tells matter how to move, matter tells space how to curve. Spacetime curvature is directly proportional to mass and energy density."),
+            ("Rogue Planet Gravity Fluctuations", "Sci-Fi Writer Collective", "Sci-Fi", "Section F, Shelf 1", 1, "A sci-fi story about a rogue planet passing near Earth, causing localized gravity fluctuations that change daily, allowing floating and jumping to extreme heights."),
+            ("Astronaut Zero-Gravity Habitat Routine", "NASA Resident Log", "Sci-Fi", "Section F, Shelf 2", 1, "The daily routine and physical sensations of living in zero-g for six months: drinking floating water droplets and feeling weightless."),
+            ("Moons of Gravity Fantasy Setting", "Worldbuilder Outline", "Sci-Fi", "Section F, Shelf 3", 1, "A worldbuilding outline for a fantasy setting where gravity strength is tied directly to the phases of three different moons."),
+            ("Orbital Changes of 50% Sun Gravity", "Astrophysics Lab Report", "Science", "Section A, Shelf 6", 1, "If the sun's gravity dropped by 50%, all planets would move into wider, highly eccentric elliptical orbits or escape the solar system entirely."),
+            ("Gravitational Lensing and Dark Matter", "Astronomer Guidebook", "Science", "Section A, Shelf 7", 1, "Gravitational lensing bends light around massive objects, allowing astronomers to map invisible dark matter and find distant exoplanets."),
+            ("Supermassive Black Hole Singularity Journey", "Theoretical Physics Group", "Science", "Section A, Shelf 8", 1, "An object falling into a black hole experiences extreme tidal force stretching (spaghettification) at the event horizon before hitting the singularity.")
         ]
         cursor.executemany("""
             INSERT INTO books (title, author, category, shelf_location, available, description)
