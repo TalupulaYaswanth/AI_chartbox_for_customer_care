@@ -47,26 +47,27 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     const pageHeaders = {
         "demo-tab": {
-            title: "Live In-Browser Voice Search Demo",
-            desc: "Speak directly into your microphone to convert speech to text and search the school database."
+            title: "Inbound AI Call Center Agent",
+            desc: "Speak directly into your microphone to test inbound customer call routing and voice search."
         },
         "simulator-tab": {
-            title: "Twilio Webhook & TwiML Simulator",
-            desc: "Test how phone calls interact with the backend webhooks without using phone credits."
+            title: "Twilio Call Center Webhook Test",
+            desc: "Test how phone calls interact with the call center backend webhooks."
         },
         "outbound-tab": {
-            title: "Outbound Customer Call Campaign Launcher",
-            desc: "Trigger automated outbound phone calls to customer contact leads."
+            title: "Outbound AI Call Center Auto-Dialer",
+            desc: "Trigger automated outbound phone calls line-by-line to customer contact leads."
         },
         "catalog-tab": {
             title: "School Library Inventory Manager",
             desc: "View, filter, and add book records and shelf locations stored in SQLite."
         },
         "logs-tab": {
-            title: "Voice Call & Search History Logs",
+            title: "AI Call Center History Logs",
             desc: "Inspect real-time logs of customer phone calls, SMS queries, and voice transcriptions."
         }
     };
+
 
     navItems.forEach(item => {
         item.addEventListener("click", () => {
