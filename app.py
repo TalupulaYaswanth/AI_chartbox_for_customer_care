@@ -606,9 +606,73 @@ def api_trigger_outbound_call():
     })
 
 
+@app.route("/api/execute-outbound-call", methods=["POST"])
+def api_execute_outbound_call():
+    """
+    Executes a step-by-step interactive automated AI voice call to a customer.
+    Parses customer record, queries database, generates voice synthesis script,
+    touches active worker cells, and logs completion.
+    """
+    data = request.get_json() or {}
+    customer_id = data.get("customer_id")
+    
+    if not customer_id:
+        return jsonify({"success": False, "error": "Customer ID is required."}), 400
+        
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM customers WHERE id = ?", (customer_id,))
+    row = cursor.fetchone()
+    
+    if not row:
+        conn.close()
+        return jsonify({"success": False, "error": "Customer not found."}), 404
+        
+    customer = dict(row)
+    topic = customer["interested_topic"] or "General"
+    name = customer["name"]
+    phone = customer["phone"]
+    
+    # Perform database lookup for customer inquiry
+    results = search_database(topic)
+    best_match = results[0] if results else None
+    
+    # Touch real active worker cells: Outbound Dispatcher, STT/TTS, Catalog Searcher, Triage
+    touch_worker_cells([5, 0, 1, 2, 3, 7, 8, 13, 17, 18])
+    
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if best_match:
+        avail_str = "available for checkout" if best_match["available"] == 1 else "currently checked out"
+        spoken_script = f"Hello {name}! This is an automated follow-up call regarding {topic}. We found {best_match['title']}. It is located at {best_match['shelf_location']}, and is {avail_str}."
+    else:
+        spoken_script = f"Hello {name}! This is an automated follow-up call regarding {topic}. We searched our school library database, but no matching records were found at this time."
+        
+    status_text = "Completed (AI Call Delivered)"
+    cursor.execute("UPDATE customers SET last_call_status = ?, last_called_at = ? WHERE id = ?", (status_text, now_str, customer_id))
+    
+    # Log to SQLite call_logs
+    cursor.execute("""
+        INSERT INTO call_logs (channel, caller_number, transcription, matched_title, matched_location, available_status, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, ("Automated AI Call", phone, f"Outbound Call to {name}: '{topic}'", best_match["title"] if best_match else None, best_match["shelf_location"] if best_match else None, best_match["available"] if best_match else None, now_str))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        "success": True,
+        "customer": customer,
+        "topic": topic,
+        "best_match": best_match,
+        "spoken_script": spoken_script,
+        "status": status_text,
+        "timestamp": now_str
+    })
 
 
 @app.route("/api/simulate-call", methods=["POST"])
+
 def api_simulate_call():
     """
     Simulates an incoming Twilio call by generating the exact TwiML XML

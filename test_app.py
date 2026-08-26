@@ -100,6 +100,15 @@ class VoiceLocatorTestCase(unittest.TestCase):
         self.assertIn('current_score', data)
         self.assertIn('active_cells', data)
 
+    def test_12_execute_outbound_call(self):
+        """Test interactive one-by-one outbound AI call execution endpoint."""
+        res = self.client.post('/api/execute-outbound-call', json={"customer_id": 1})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertIn('spoken_script', data)
+
 if __name__ == '__main__':
     unittest.main()
+
 

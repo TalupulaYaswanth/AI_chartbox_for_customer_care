@@ -505,58 +505,100 @@ document.addEventListener("DOMContentLoaded", () => {
         `).join("");
     }
 
-    window.triggerOutboundCall = async (customerId) => {
-        const payload = {
-            customer_id: customerId,
-            twilio_sid: document.getElementById("outbound-twilio-sid").value.trim(),
-            twilio_token: document.getElementById("outbound-twilio-token").value.trim(),
-            twilio_phone: document.getElementById("outbound-twilio-phone").value.trim(),
-            ngrok_url: document.getElementById("outbound-ngrok-url").value.trim()
-        };
-
+    async function executeSingleOutboundCall(customerId) {
         try {
+            const res = await fetch("/api/execute-outbound-call", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ customer_id: customerId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Speak the AI voice script so the user hears the AI talk live!
+                if ("speechSynthesis" in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(data.spoken_script);
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.0;
+                    window.speechSynthesis.speak(utterance);
+                }
+                fetchCustomers();
+                return data;
+            }
+        } catch (err) {
+            console.error("[EXECUTE OUTBOUND CALL ERROR]", err);
+        }
+        return null;
+    }
+
+    window.triggerOutboundCall = async (customerId) => {
+        // Check if user filled in real Twilio keys
+        const twilioSid = document.getElementById("outbound-twilio-sid").value.trim();
+        if (twilioSid) {
+            // Real Twilio carrier call mode
+            const payload = {
+                customer_id: customerId,
+                twilio_sid: twilioSid,
+                twilio_token: document.getElementById("outbound-twilio-token").value.trim(),
+                twilio_phone: document.getElementById("outbound-twilio-phone").value.trim(),
+                ngrok_url: document.getElementById("outbound-ngrok-url").value.trim()
+            };
             const res = await fetch("/api/trigger-outbound-call", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            if (data.success) {
-                alert(data.message + "\nCheck System Call Logs for event details.");
-                fetchCustomers();
-            } else {
-                alert("Error: " + data.error);
-            }
-        } catch (err) {
-            console.error("[CALL TRIGGER ERROR]", err);
+            alert(data.message);
+            fetchCustomers();
+        } else {
+            // Interactive One-by-One Automated AI Voice Call Runner
+            await executeSingleOutboundCall(customerId);
         }
     };
 
     if (triggerAllCallsBtn) {
         triggerAllCallsBtn.addEventListener("click", async () => {
-            const payload = {
-                twilio_sid: document.getElementById("outbound-twilio-sid").value.trim(),
-                twilio_token: document.getElementById("outbound-twilio-token").value.trim(),
-                twilio_phone: document.getElementById("outbound-twilio-phone").value.trim(),
-                ngrok_url: document.getElementById("outbound-ngrok-url").value.trim()
-            };
-
-            try {
+            const twilioSid = document.getElementById("outbound-twilio-sid").value.trim();
+            if (twilioSid) {
+                const payload = {
+                    twilio_sid: twilioSid,
+                    twilio_token: document.getElementById("outbound-twilio-token").value.trim(),
+                    twilio_phone: document.getElementById("outbound-twilio-phone").value.trim(),
+                    ngrok_url: document.getElementById("outbound-ngrok-url").value.trim()
+                };
                 const res = await fetch("/api/trigger-outbound-call", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                if (data.success) {
-                    alert(data.message + "\nCampaign triggered for all customer contacts!");
-                    fetchCustomers();
+                alert(data.message);
+                fetchCustomers();
+            } else {
+                // Interactive One-by-One Campaign Runner across all customers!
+                triggerAllCallsBtn.disabled = true;
+                triggerAllCallsBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Executing AI Calls One-by-One...`;
+                
+                const res = await fetch("/api/customers");
+                const data = await res.json();
+                const customers = data.customers || [];
+                
+                for (let i = 0; i < customers.length; i++) {
+                    const c = customers[i];
+                    triggerAllCallsBtn.innerHTML = `<i class="fa-solid fa-phone-volume fa-bounce"></i> Calling ${c.name} (${i+1}/${customers.length})...`;
+                    await executeSingleOutboundCall(c.id);
+                    // Pause between one-by-one calls to let speech finish
+                    await new Promise(resolve => setTimeout(resolve, 4000));
                 }
-            } catch (err) {
-                console.error(err);
+                
+                triggerAllCallsBtn.disabled = false;
+                triggerAllCallsBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Trigger Outbound Campaign to All`;
+                alert("Outbound AI Call Campaign completed one-by-one for all customers!");
             }
         });
     }
+
 
     if (openAddCustomerModalBtn) openAddCustomerModalBtn.addEventListener("click", () => addCustomerModal.classList.add("active"));
     if (closeCustomerModalBtn) closeCustomerModalBtn.addEventListener("click", () => addCustomerModal.classList.remove("active"));
