@@ -758,10 +758,17 @@ def touch_worker_cells(cell_indices):
             WORKER_ACTIVITY[idx] = now
 
 
+@app.route("/call-center-dashboard")
+def call_center_dashboard_flask():
+    """Render the real-time websocket call center dashboard."""
+    return render_template("call_center.html")
+
+
 @app.route("/monitor")
 def convergence_monitor():
     """Render the Worker Cells Convergence Monitor interface."""
     return render_template("monitor.html")
+
 
 
 @app.route("/api/convergence-metrics", methods=["GET"])
