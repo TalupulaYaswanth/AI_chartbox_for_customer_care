@@ -105,9 +105,21 @@
     transition:border-color 0.3s;
   }
   .cell .id{font-size:10px;color:var(--text-mute);}
-  .cell .pulse{width:8px;height:8px;border-radius:50%;background:var(--line-dim);margin-top:4px;transition:background 0.3s, box-shadow 0.3s;}
-  .cell.active .pulse{background:var(--line);box-shadow:0 0 0 3px rgba(255,255,255,0.08);}
-  .cell.active{border-color:var(--line-dim);}
+  .cell .pulse{width:8px;height:8px;border-radius:50%;background:var(--line-dim);margin-top:4px;transition:all 0.3s;}
+  .cell.active .pulse{
+    background:#ffffff;
+    box-shadow:0 0 12px 3px rgba(255,255,255,0.6);
+    animation:cellPulse 1.2s infinite ease-in-out;
+  }
+  .cell.active{
+    border-color:var(--line);
+    background:#222222;
+  }
+  @keyframes cellPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.6; }
+  }
+
 
   .legend{display:flex;gap:18px;margin-top:12px;font-size:11px;color:var(--text-dim);flex-wrap:wrap;font-family:'IBM Plex Mono',monospace;}
   .legend span{display:flex;align-items:center;gap:6px;}
@@ -308,8 +320,9 @@
   }
 
   fetchLiveData();
-  setInterval(fetchLiveData, 1400);
+  setInterval(fetchLiveData, 1000);
 })();
+
 </script>
 </body>
 </html>
