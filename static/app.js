@@ -59,14 +59,15 @@ document.addEventListener("DOMContentLoaded", () => {
             desc: "Trigger automated outbound phone calls line-by-line to customer contact leads."
         },
         "catalog-tab": {
-            title: "School Library Inventory Manager",
-            desc: "View, filter, and add book records and shelf locations stored in SQLite."
+            title: "Owner Knowledge Base & Data Manager",
+            desc: "Owner portal: Add, manage, and provide data records that the AI uses to answer caller questions."
         },
         "logs-tab": {
-            title: "AI Call Center History Logs",
-            desc: "Inspect real-time logs of customer phone calls, SMS queries, and voice transcriptions."
+            title: "Owner Portal: Stored Conversations & Transcripts",
+            desc: "Owner portal: View all stored user-AI conversations, transcriptions, timestamps, and matched answers."
         }
     };
+
 
 
     navItems.forEach(item => {
