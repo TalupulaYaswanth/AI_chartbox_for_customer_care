@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Search & Call Automation System | School Project</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-microphone-lines"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>VoiceLocator</h2>
+                    <span>STT Telephony System</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="demo-tab">
+                    <i class="fa-solid fa-headset"></i>
+                    <span>Live Voice Demo</span>
+                </button>
+                <button class="nav-item" data-tab="simulator-tab">
+                    <i class="fa-solid fa-phone-volume"></i>
+                    <span>Twilio Webhook Test</span>
+                </button>
+                <button class="nav-item" data-tab="outbound-tab">
+                    <i class="fa-solid fa-bullhorn"></i>
+                    <span>Outbound Call Trigger</span>
+                </button>
+                <button class="nav-item" data-tab="catalog-tab">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <span>Library Inventory</span>
+                </button>
+                <button class="nav-item" data-tab="logs-tab">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>System Call Logs</span>
+                </button>
+            </nav>
+
+
+            <div class="system-status-card">
+                <div class="status-indicator online"></div>
+                <div class="status-info">
+                    <span class="status-title">System Active</span>
+                    <span class="status-sub">No AI Models Required</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header Bar -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h1 id="page-title">Live In-Browser Voice Search Demo</h1>
+                    <p id="page-desc">Speak directly into your microphone to convert speech to text and search the school database.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="badge-pill" id="stt-status-badge">
+                        <i class="fa-solid fa-bolt"></i> Web Speech API
+                    </button>
+                </div>
+            </header>
+
+            <!-- TAB 1: IN-BROWSER VOICE DEMO -->
+            <section class="tab-content active" id="demo-tab">
+                <div class="voice-hero-grid">
+                    <!-- Left: Interactive Voice Controller -->
+                    <div class="glass-card voice-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-microphone"></i> Voice Assistant Input</h3>
+                            <span class="pulse-tag" id="mic-status-tag">Ready</span>
+                        </div>
+
+                        <div class="mic-stage">
+                            <button id="mic-btn" class="mic-button" title="Click to start speaking">
+                                <div class="mic-waves"></div>
+                                <i class="fa-solid fa-microphone mic-icon"></i>
+                            </button>
+                            <p class="mic-prompt" id="mic-instruction">Click the microphone & speak a book or subject (e.g. <i>"Physics"</i> or <i>"Calculus"</i>)</p>
+                        </div>
+
+                        <div class="transcription-box">
+                            <label><i class="fa-solid fa-wave-square"></i> Speech-to-Text Transcription Output:</label>
+                            <div class="transcription-text" id="live-transcription">Waiting for voice input...</div>
+                        </div>
+
+                        <div class="manual-fallback">
+                            <label>Or type a search query manually:</label>
+                            <div class="input-group">
+                                <input type="text" id="manual-query-input" placeholder="e.g. Physics, History, Algorithms...">
+                                <button class="btn primary-btn" id="manual-search-btn">
+                                    <i class="fa-solid fa-search"></i> Search DB
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Search Match & TTS Output -->
+                    <div class="glass-card result-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-database"></i> Database Match & Response</h3>
+                            <button class="btn icon-btn" id="speak-response-btn" title="Replay Spoken Text">
+                                <i class="fa-solid fa-volume-high"></i>
+                            </button>
+                        </div>
+
+                        <div id="result-container" class="result-body empty-state">
+                            <div class="placeholder-content">
+                                <i class="fa-solid fa-magnifying-glass-location"></i>
+                                <h4>No Query Processed Yet</h4>
+                                <p>Use the microphone on the left to trigger speech-to-text keyword search.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Keywords Row -->
+                <div class="quick-keywords-section glass-card">
+                    <h4><i class="fa-solid fa-bolt"></i> Quick Test Keywords (Click to Test):</h4>
+                    <div class="keyword-tags">
+                        <button class="tag-btn" data-query="Physics">Physics</button>
+                        <button class="tag-btn" data-query="Calculus">Calculus</button>
+                        <button class="tag-btn" data-query="Computer Science">Computer Science</button>
+                        <button class="tag-btn" data-query="World History">World History</button>
+                        <button class="tag-btn" data-query="Organic Chemistry">Organic Chemistry</button>
+                        <button class="tag-btn" data-query="Algorithms">Algorithms</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TWILIO SIMULATOR -->
+            <section class="tab-content" id="simulator-tab">
+                <div class="grid-2col">
+                    <!-- Simulator Control Panel -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-phone"></i> Simulate Twilio Phone Call</h3>
+                        </div>
+                        <p class="card-desc">Simulate how Twilio's <code>&lt;Gather input="speech"&gt;</code> webhook handles customer calls and returns TwiML VoiceResponse XML.</p>
+
+                        <div class="form-group">
+                            <label>Customer Phone Number:</label>
+                            <input type="text" id="sim-phone" value="+1 (555) 234-5678" class="form-input">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Simulated Customer Speech Input:</label>
+                            <input type="text" id="sim-speech" placeholder="e.g. 'I need a Physics book'" class="form-input">
+                        </div>
+
+                        <div class="button-row">
+                            <button class="btn primary-btn" id="run-sim-btn">
+                                <i class="fa-solid fa-play"></i> Run Call Simulation
+                            </button>
+                        </div>
+
+                        <hr class="divider">
+
+                        <h4><i class="fa-solid fa-link"></i> Twilio Webhook Endpoints for Production:</h4>
+                        <div class="webhook-urls">
+                            <div class="url-item">
+                                <span class="method get-post">GET/POST</span>
+                                <code>/voice</code>
+                                <span class="url-desc">Twilio Call Entrypoint</span>
+                            </div>
+                            <div class="url-item">
+                                <span class="method post">POST</span>
+                                <code>/handle-speech</code>
+                                <span class="url-desc">Twilio STT Webhook</span>
+                            </div>
+                            <div class="url-item">
+                                <span class="method post">POST</span>
+                                <code>/sms</code>
+                                <span class="url-desc">Twilio SMS Webhook</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TwiML XML Output Inspector -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-code"></i> Generated TwiML Voice XML</h3>
+                        </div>
+                        <div class="code-box">
+                            <pre><code id="twiml-code-output">&lt;!-- Run a call simulation to inspect generated TwiML response --&gt;</code></pre>
+                        </div>
+                        <div class="spoken-preview" id="sim-spoken-preview">
+                            <strong><i class="fa-solid fa-comment-dots"></i> Voice Synthesis Payload:</strong>
+                            <p id="sim-spoken-text">No simulation executed.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: LIBRARY INVENTORY MANAGER -->
+            <section class="tab-content" id="catalog-tab">
+                <div class="glass-card">
+                    <div class="card-header flex-between">
+                        <h3><i class="fa-solid fa-book"></i> Library Books & Shelf Locations</h3>
+                        <button class="btn primary-btn" id="open-add-modal-btn">
+                            <i class="fa-solid fa-plus"></i> Add New Book
+                        </button>
+                    </div>
+
+                    <div class="filter-bar">
+                        <div class="search-input-wrap">
+                            <i class="fa-solid fa-search"></i>
+                            <input type="text" id="inventory-search" placeholder="Filter inventory by title, author, category...">
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Author</th>
+                                    <th>Category</th>
+                                    <th>Shelf Location</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body">
+                                <tr><td colspan="7" class="loading-cell">Loading library items...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: CALL LOGS -->
+            <section class="tab-content" id="logs-tab">
+                <div class="glass-card">
+                    <div class="card-header flex-between">
+                        <h3><i class="fa-solid fa-list-check"></i> Recent Voice & Call History</h3>
+                        <button class="btn secondary-btn" id="refresh-logs-btn">
+                            <i class="fa-solid fa-rotate-right"></i> Refresh Logs
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Channel</th>
+                                    <th>Caller / Origin</th>
+                                    <th>Transcribed Speech Query</th>
+                                    <th>Matched Book Title</th>
+                                    <th>Shelf Location</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body">
+                                <tr><td colspan="7" class="loading-cell">Loading call logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            <!-- TAB 5: OUTBOUND CUSTOMER CALL CAMPAIGN LAUNCHER -->
+            <section class="tab-content" id="outbound-tab">
+                <div class="glass-card" style="margin-bottom: 24px;">
+                    <div class="card-header flex-between">
+                        <h3><i class="fa-solid fa-bullhorn"></i> Outbound Customer Call Dispatcher</h3>
+                        <button class="btn primary-btn" id="trigger-all-calls-btn">
+                            <i class="fa-solid fa-paper-plane"></i> Trigger Outbound Campaign to All
+                        </button>
+                    </div>
+                    <p class="card-desc" style="color: var(--text-muted);">
+                        Trigger automated outbound phone calls to customer leads. The system calls the customer's phone, plays an automated prompt, gathers their voice response, and speaks back matching database records.
+                    </p>
+                </div>
+
+                <div class="grid-2col">
+                    <!-- Customer Contact List -->
+                    <div class="glass-card">
+                        <div class="card-header flex-between">
+                            <h4><i class="fa-solid fa-users"></i> Customer Contact List</h4>
+                            <button class="btn icon-btn" id="open-add-customer-modal-btn">
+                                <i class="fa-solid fa-user-plus"></i> Add Customer
+                            </button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Interest</th>
+                                        <th>Call Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customer-table-body">
+                                    <tr><td colspan="5" class="loading-cell">Loading customer contacts...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Twilio Credentials & Real Call Config -->
+                    <div class="glass-card">
+                        <div class="card-header">
+                            <h4><i class="fa-solid fa-key"></i> Real Telecom Call Configuration (Twilio)</h4>
+                        </div>
+                        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+                            To place <strong>real phone calls</strong> to your mobile phone, enter your free Twilio Account SID, Auth Token, Twilio Number, and active ngrok forwarding URL below:
+                        </p>
+                        <div class="form-group">
+                            <label>Twilio Account SID</label>
+                            <input type="text" id="outbound-twilio-sid" class="form-input" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxx">
+                        </div>
+                        <div class="form-group">
+                            <label>Twilio Auth Token</label>
+                            <input type="password" id="outbound-twilio-token" class="form-input" placeholder="xxxxxxxxxxxxxxxxxxxxxxxx">
+                        </div>
+                        <div class="form-group">
+                            <label>Twilio Phone Number (From)</label>
+                            <input type="text" id="outbound-twilio-phone" class="form-input" placeholder="+1234567890">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngrok Forwarding URL (Public HTTPS Webhook)</label>
+                            <input type="text" id="outbound-ngrok-url" class="form-input" placeholder="https://xxxx.ngrok-free.app">
+                        </div>
+                        <div class="spoken-box" style="margin-top:12px;">
+                            <strong><i class="fa-solid fa-circle-info"></i> Note on Real Telecom Calls:</strong><br>
+                            If left empty, triggering an outbound call executes an <strong>interactive call simulation</strong> in SQLite.
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for Adding New Book -->
+    <div class="modal-backdrop" id="add-modal">
+        <div class="modal-card glass-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-book-medical"></i> Add New Library Record</h3>
+                <button class="close-modal" id="close-modal-btn">&times;</button>
+            </div>
+            <form id="add-book-form">
+                <div class="form-group">
+                    <label>Book Title *</label>
+                    <input type="text" id="new-title" class="form-input" required placeholder="e.g. Modern Physics">
+                </div>
+                <div class="form-group">
+                    <label>Author</label>
+                    <input type="text" id="new-author" class="form-input" placeholder="e.g. Albert Einstein">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="new-category" class="form-input" placeholder="e.g. Science">
+                    </div>
+                    <div class="form-group">
+                        <label>Shelf Location *</label>
+                        <input type="text" id="new-location" class="form-input" required placeholder="e.g. Section A, Shelf 2">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="new-desc" class="form-input" rows="2" placeholder="Brief summary..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn secondary-btn" id="cancel-modal-btn">Cancel</button>
+                    <button type="submit" class="btn primary-btn"><i class="fa-solid fa-save"></i> Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Adding New Customer -->
+    <div class="modal-backdrop" id="add-customer-modal">
+        <div class="modal-card glass-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-plus"></i> Add Customer Contact</h3>
+                <button class="close-modal" id="close-customer-modal-btn">&times;</button>
+            </div>
+            <form id="add-customer-form">
+                <div class="form-group">
+                    <label>Customer Name *</label>
+                    <input type="text" id="new-cust-name" class="form-input" required placeholder="e.g. John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number *</label>
+                    <input type="text" id="new-cust-phone" class="form-input" required placeholder="e.g. +15551234567">
+                </div>
+                <div class="form-group">
+                    <label>Interested Topic / Book Keyword</label>
+                    <input type="text" id="new-cust-topic" class="form-input" placeholder="e.g. Physics">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn secondary-btn" id="cancel-customer-modal-btn">Cancel</button>
+                    <button type="submit" class="btn primary-btn"><i class="fa-solid fa-save"></i> Save Customer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
