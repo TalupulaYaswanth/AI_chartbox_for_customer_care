@@ -137,7 +137,61 @@ def search_database(query_text):
     conn.close()
     return results
 
+def ai_triage_decision(query_text):
+    """
+    Layer 3 & 4: AI Triage & Decision Routing Engine.
+    Parses the transcribed caller text, classifies intent/category, urgency, and assigns 
+    the specific worker cell (C01 - C24) to route the call.
+    Returns structured decision JSON: { "category", "urgency", "confidence", "assigned_cell_id", "assigned_cell_role" }
+    """
+    if not query_text or not query_text.strip():
+        return {
+            "category": "Unknown",
+            "urgency": "Low",
+            "confidence": 0.0,
+            "assigned_cell_id": 16, # Search Fallback Engine
+            "assigned_cell_role": WORKER_CELL_ROLES[16]
+        }
+        
+    query_lower = query_text.lower()
+    
+    # Classify intent & assign worker cell
+    if any(w in query_lower for w in ["physics", "science", "chemistry", "biology"]):
+        category = "Science Inquiry"
+        assigned_cell = 0 # Voice Search API Engine
+        confidence = 0.95
+    elif any(w in query_lower for w in ["calculus", "math", "algebra", "integral"]):
+        category = "Mathematics Inquiry"
+        assigned_cell = 3 # SQLite Catalog Searcher
+        confidence = 0.94
+    elif any(w in query_lower for w in ["computer", "code", "algorithm", "python", "data"]):
+        category = "Technology Inquiry"
+        assigned_cell = 8 # Keyword Matcher
+        confidence = 0.98
+    elif any(w in query_lower for w in ["history", "world", "war", "era"]):
+        category = "History Inquiry"
+        assigned_cell = 15 # Inventory Tracker
+        confidence = 0.92
+    else:
+        category = "General Library Query"
+        assigned_cell = 16 # Search Fallback Engine
+        confidence = 0.85
+        
+    urgency = "High" if ("urgent" in query_lower or "today" in query_lower) else "Standard"
+    
+    # Touch assigned worker cell and infrastructure cells
+    touch_worker_cells([assigned_cell, 0, 1, 3, 10])
+    
+    return {
+        "category": category,
+        "urgency": urgency,
+        "confidence": confidence,
+        "assigned_cell_id": assigned_cell,
+        "assigned_cell_role": WORKER_CELL_ROLES[assigned_cell]
+    }
+
 def log_call(channel, caller_number, transcription, result):
+
     """Save call/voice search history to SQLite."""
     conn = get_db()
     cursor = conn.cursor()
@@ -342,6 +396,7 @@ def api_search():
     if not query:
         return jsonify({"success": False, "message": "Query parameter is required."}), 400
         
+    triage = ai_triage_decision(query)
     results = search_database(query)
     best_match = results[0] if results else None
     
@@ -359,8 +414,10 @@ def api_search():
         "query": query,
         "best_match": best_match,
         "all_results": results,
-        "spoken_response": spoken_response
+        "spoken_response": spoken_response,
+        "triage_decision": triage
     })
+
 
 
 @app.route("/api/books", methods=["GET", "POST"])
