@@ -203,16 +203,16 @@
 </head>
 <body>
     <div class="wrap">
-        <header>
+        <header style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
             <div>
                 <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Main Web Locator</a>
                 <h1 style="margin-top: 10px;">Apex AI Voice Call Center</h1>
                 <p>Real-time Twilio calling, Deepgram transcription, and Claude 3.5 RAG brain</p>
             </div>
             <div>
-                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); padding: 8px 16px; border-radius: 30px; font-size: 0.85rem; font-weight: 600;">
-                    <i class="fa-solid fa-signal"></i> System Ready
-                </div>
+                <button class="btn secondary-btn" id="logout-btn" style="border-color: #ff3b30; color: #ff3b30; font-size: 0.9rem; padding: 8px 16px;">
+                    <i class="fa-solid fa-sign-out-alt"></i> Sign Out
+                </button>
             </div>
         </header>
 
@@ -494,6 +494,20 @@
             }
         });
 
+        // Sign out button handler
+        const logoutBtn = document.getElementById("logout-btn");
+        if (logoutBtn) {
+            logoutBtn.addEventListener("click", async () => {
+                localStorage.removeItem("owner_logged_in");
+                try {
+                    await fetch("http://localhost:5000/api/logout", { method: "POST" });
+                } catch (err) {
+                    console.error("Logout request failed", err);
+                }
+                window.location.href = "http://localhost:5000/login";
+            });
+        }
     </script>
+
 </body>
 </html>

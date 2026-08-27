@@ -240,7 +240,10 @@ init_db()
 @app.route("/")
 def index():
     """Render the dashboard & voice search web app."""
+    if not session.get("logged_in"):
+        return render_template("login.html")
     return render_template("index.html")
+
 
 
 # ==========================================

@@ -9,10 +9,20 @@ class VoiceLocatorTestCase(unittest.TestCase):
         init_db()
 
     def test_01_index_page(self):
-        """Test homepage loads HTML correctly."""
+        """Test homepage loads HTML correctly based on authentication."""
+        # 1. Unauthenticated request - should load login page
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Owner Portal Access', response.data)
+        
+        # 2. Authenticated request - should load dashboard index page
+        with self.client.session_transaction() as sess:
+            sess['logged_in'] = True
+            
         response = self.client.get('/')
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'VoiceLocator', response.data)
+
 
     def test_02_database_search(self):
         """Test SQL database keyword search algorithm."""

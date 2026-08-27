@@ -898,6 +898,21 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // Sign out button handler
+    const logoutBtn = document.getElementById("logout-btn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+            localStorage.removeItem("owner_logged_in");
+            try {
+                await fetch("/api/logout", { method: "POST" });
+            } catch (err) {
+                console.error("Logout request failed", err);
+            }
+            window.location.href = "/login";
+        });
+    }
 });
+
 
 
