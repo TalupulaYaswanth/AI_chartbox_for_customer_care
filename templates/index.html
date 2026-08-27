@@ -469,7 +469,33 @@
         </div>
     </div>
 
+    <!-- Modal for Viewing Stored Chat Conversation Transcript -->
+    <div class="modal-backdrop" id="transcript-modal">
+        <div class="modal-card glass-card" style="max-width: 600px; width: 95%;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-comments"></i> Conversation Transcript</h3>
+                <button class="close-modal" id="close-transcript-modal-btn">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 10px 0;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between;">
+                    <span id="transcript-meta-caller">Caller: Web Simulator</span>
+                    <span id="transcript-meta-time">Time: -</span>
+                </div>
+                <div class="chat-container" id="modal-chat-container" style="height: 340px; background: rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 15px; border-radius: 8px;">
+                    <!-- Dynamic chat bubbles loaded via JS -->
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px;">
+                <button type="button" class="btn secondary-btn" id="close-transcript-btn">Close</button>
+                <button type="button" class="btn primary-btn" id="download-transcript-modal-btn">
+                    <i class="fa-solid fa-download"></i> Download Script
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
+
 

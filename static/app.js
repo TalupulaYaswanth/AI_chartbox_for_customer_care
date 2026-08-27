@@ -530,6 +530,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${log.matched_location || '-'}</td>
                 <td><span style="font-size:0.8rem; color:var(--text-muted);">${log.timestamp}</span></td>
                 <td>
+                    <button class="btn icon-btn" onclick="openTranscriptModal(${log.id}, '${encodeURIComponent(log.channel)}', '${encodeURIComponent(log.caller_number || 'Web')}', '${encodeURIComponent(log.transcription)}', '${encodeURIComponent(log.matched_title || 'None')}', '${encodeURIComponent(log.matched_location || '-')}', '${encodeURIComponent(log.timestamp)}')" style="color:var(--accent); margin-right: 8px;" title="View Transcript">
+                        <i class="fa-solid fa-comments"></i>
+                    </button>
                     <button class="btn icon-btn" onclick="downloadLogScript(${log.id}, '${encodeURIComponent(log.channel)}', '${encodeURIComponent(log.caller_number || 'Web')}', '${encodeURIComponent(log.transcription)}', '${encodeURIComponent(log.matched_title || 'None')}', '${encodeURIComponent(log.matched_location || '-')}', '${encodeURIComponent(log.timestamp)}')" style="color:var(--primary);" title="Download Script">
                         <i class="fa-solid fa-download"></i>
                     </button>
@@ -537,6 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </tr>
         `).join("");
     }
+
 
     window.downloadLogScript = (id, channel, caller, transcript, matched, location, timestamp) => {
         channel = decodeURIComponent(channel);
@@ -569,7 +573,76 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.removeChild(link);
     };
 
+    const transcriptModal = document.getElementById("transcript-modal");
+    const closeTranscriptModalBtn = document.getElementById("close-transcript-modal-btn");
+    const closeTranscriptBtn = document.getElementById("close-transcript-btn");
+    const downloadTranscriptModalBtn = document.getElementById("download-transcript-modal-btn");
+    const modalChatContainer = document.getElementById("modal-chat-container");
+    
+    let activeModalScriptData = null;
+
+    window.openTranscriptModal = (id, channel, caller, transcript, matched, location, timestamp) => {
+        channel = decodeURIComponent(channel);
+        caller = decodeURIComponent(caller);
+        transcript = decodeURIComponent(transcript);
+        matched = decodeURIComponent(matched);
+        location = decodeURIComponent(location);
+        timestamp = decodeURIComponent(timestamp);
+
+        activeModalScriptData = { id, channel, caller, transcript, matched, location, timestamp };
+
+        document.getElementById("transcript-meta-caller").innerText = `Caller: ${caller} (${channel})`;
+        document.getElementById("transcript-meta-time").innerText = `Time: ${timestamp}`;
+
+        // Build dialogue bubbles dynamically
+        let bubblesHtml = `
+            <div class="bubble system">
+                📞 Call session started. Exchanged via ${channel}.
+            </div>
+            <div class="bubble caller">
+                <span class="bubble-meta">Caller &bull; ${timestamp}</span>
+                <span>"${transcript}"</span>
+            </div>
+        `;
+
+        if (matched && matched !== "None" && matched !== "null") {
+            bubblesHtml += `
+                <div class="bubble ai">
+                    <span class="bubble-meta">AI Voice Agent &bull; ${timestamp}</span>
+                    <span>"We found matches for your inquiry. Here are the details: ${matched} is located at ${location}."</span>
+                </div>
+                <div class="bubble system">
+                    ✅ Resolved query successfully. RAG Database Match verified.
+                </div>
+            `;
+        } else {
+            bubblesHtml += `
+                <div class="bubble ai">
+                    <span class="bubble-meta">AI Voice Agent &bull; ${timestamp}</span>
+                    <span>"I searched our database, but no matching service records were found. Transferring to agent."</span>
+                </div>
+                <div class="bubble system" style="color:var(--danger);">
+                    ⚠️ Handed off. Redirecting call to human representative.
+                </div>
+            `;
+        }
+
+        modalChatContainer.innerHTML = bubblesHtml;
+        transcriptModal.classList.add("active");
+    };
+
+    if (closeTranscriptModalBtn) closeTranscriptModalBtn.addEventListener("click", () => transcriptModal.classList.remove("active"));
+    if (closeTranscriptBtn) closeTranscriptBtn.addEventListener("click", () => transcriptModal.classList.remove("active"));
+    if (downloadTranscriptModalBtn) {
+        downloadTranscriptModalBtn.addEventListener("click", () => {
+            if (!activeModalScriptData) return;
+            const d = activeModalScriptData;
+            downloadLogScript(d.id, encodeURIComponent(d.channel), encodeURIComponent(d.caller), encodeURIComponent(d.transcript), encodeURIComponent(d.matched), encodeURIComponent(d.location), encodeURIComponent(d.timestamp));
+        });
+    }
+
     refreshLogsBtn.addEventListener("click", fetchLogs);
+
 
 
 

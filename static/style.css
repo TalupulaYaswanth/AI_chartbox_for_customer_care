@@ -291,37 +291,40 @@ body {
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), var(--accent));
-    border: none;
+    background: #ffffff;
+    border: 2px solid var(--border-glass);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    box-shadow: 0 0 24px var(--primary-glow);
+    color: #000000;
+    box-shadow: 0 0 24px rgba(255, 255, 255, 0.25);
     transition: var(--transition);
 }
 
 .mic-button .mic-icon {
     font-size: 38px;
+    color: #000000;
     z-index: 2;
 }
 
 .mic-button:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 32px var(--accent-glow);
+    box-shadow: 0 0 32px rgba(255, 255, 255, 0.4);
 }
 
 .mic-button.listening {
-    background: linear-gradient(135deg, #ef4444, #f59e0b);
-    animation: micRipple 1.2s infinite;
+    background: #ffffff;
+    color: #000000;
+    animation: micRippleBw 1.2s infinite;
 }
 
-@keyframes micRipple {
-    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-    70% { box-shadow: 0 0 0 24px rgba(239, 68, 68, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+@keyframes micRippleBw {
+    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
+    70% { box-shadow: 0 0 0 24px rgba(255, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
 }
+
 
 .mic-prompt {
     margin-top: 16px;
