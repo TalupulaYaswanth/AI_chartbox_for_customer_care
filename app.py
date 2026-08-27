@@ -84,7 +84,10 @@ def init_db():
     # Seed default admin user if users table is empty
     cursor.execute("SELECT COUNT(*) FROM users")
     if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", ("admin", "admin123", "owner@gmail.com"))
+        cursor.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", ("admin", "123456789", "owner@gmail.com"))
+    else:
+        cursor.execute("UPDATE users SET password = ? WHERE username = ?", ("123456789", "admin"))
+
 
     # Seed data if empty
     cursor.execute("SELECT COUNT(*) FROM books")
