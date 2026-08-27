@@ -465,8 +465,10 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
         }
+        });
     }
     // Modal Edit Book
+
 
     const editModal = document.getElementById("edit-modal");
     const closeEditModalBtn = document.getElementById("close-edit-modal-btn");
