@@ -569,7 +569,19 @@ def api_customers():
     return jsonify({"success": True, "customers": customers})
 
 
+@app.route("/api/customers/<int:customer_id>", methods=["DELETE"])
+def api_delete_customer(customer_id):
+    """Delete a customer contact from the database."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "Customer contact deleted."})
+
+
 @app.route("/api/trigger-outbound-call", methods=["POST"])
+
 def api_trigger_outbound_call():
     """
     Triggers automated outbound phone call(s) to customer(s).

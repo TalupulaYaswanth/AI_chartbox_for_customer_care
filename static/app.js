@@ -708,8 +708,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><span class="badge-channel">${c.interested_topic || 'General'}</span></td>
                 <td><span class="pulse-tag" style="font-size:0.75rem;">${c.last_call_status || 'Not Called'}</span></td>
                 <td>
-                    <button class="btn primary-btn" onclick="triggerOutboundCall(${c.id})" style="padding:4px 10px; font-size:0.8rem;">
+                    <button class="btn primary-btn" onclick="triggerOutboundCall(${c.id})" style="padding:4px 10px; font-size:0.8rem; margin-right:6px; display:inline-flex;">
                         <i class="fa-solid fa-phone"></i> Call
+                    </button>
+                    <button class="btn icon-btn" onclick="deleteCustomer(${c.id})" style="color:var(--danger); display:inline-flex; padding:4px 8px;" title="Delete Customer">
+                        <i class="fa-solid fa-trash"></i>
                     </button>
                 </td>
             </tr>
@@ -912,7 +915,20 @@ document.addEventListener("DOMContentLoaded", () => {
             window.location.href = "/login";
         });
     }
+
+    // Delete customer action
+    window.deleteCustomer = async (id) => {
+        if (!confirm("Are you sure you want to delete this customer contact?")) return;
+        try {
+            const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
+            const data = await res.json();
+            if (data.success) fetchCustomers();
+        } catch (err) {
+            console.error(err);
+        }
+    };
 });
+
 
 
 
