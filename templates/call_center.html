@@ -284,10 +284,17 @@
     </div>
 
     <script>
+        // Redirect to login if owner is not signed in
+        if (localStorage.getItem("owner_logged_in") !== "true") {
+            alert("Owner Portal is locked. Redirecting to starting Sign In page...");
+            window.location.href = "http://localhost:5000/login";
+        }
+
         const callForm = document.getElementById("call-form");
         const consoleLogs = document.getElementById("console-logs");
         const submitCallBtn = document.getElementById("submit-call-btn");
         const downloadBtn = document.getElementById("download-script-btn");
+
 
         let callTranscript = [];
         let recognition = null;

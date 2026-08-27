@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Apex AI Call Center</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg: #000000;
+            --surface: #0a0a0a;
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --primary: #ffffff;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --danger: #ff3b30;
+            --radius: 12px;
+            --transition: all 0.25s ease;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Grid background effect */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: -1;
+        }
+
+        .login-card {
+            background: var(--surface);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .login-header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .login-header i {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+
+        .login-header h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .login-header p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+
+        .form-input {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #ffffff;
+            font-size: 1rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #000000;
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .error-message {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fa-solid fa-microphone-lines"></i>
+            <h2>Owner Portal Access</h2>
+            <p>Please log in to manage database and telemetry</p>
+        </div>
+
+        <div class="error-message" id="error-box">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span id="error-text">Invalid credentials</span>
+        </div>
+
+        <form id="login-form">
+            <div class="form-group" style="margin-bottom: 16px;">
+                <label for="username">Username</label>
+                <input type="text" id="username" class="form-input" placeholder="admin" required value="admin">
+            </div>
+            <div class="form-group" style="margin-bottom: 24px;">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn" id="login-btn">
+                <span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById("login-form");
+        const errorBox = document.getElementById("error-box");
+        const errorText = document.getElementById("error-text");
+
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            try {
+                const res = await fetch("/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Set local storage flag
+                    localStorage.setItem("owner_logged_in", "true");
+                    window.location.href = data.redirect || "/";
+                } else {
+                    errorText.innerText = data.error || "Authentication failed.";
+                    errorBox.style.display = "flex";
+                }
+            } catch (err) {
+                errorText.innerText = "Network error. Try again.";
+                errorBox.style.display = "flex";
+            }
+        });
+    </script>
+</body>
+</html>

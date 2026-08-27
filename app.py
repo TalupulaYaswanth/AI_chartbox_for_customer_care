@@ -1,10 +1,12 @@
 import os
 import sqlite3
 from datetime import datetime
-from flask import Flask, request, Response, jsonify, render_template
+from flask import Flask, request, Response, jsonify, render_template, session, redirect, url_for
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
+app.secret_key = "supersecretkey_apex_call_center"
 DB_PATH = "school_library.db"
+
 
 # Try importing twilio helper, fallback to basic XML generator if not installed
 try:
@@ -855,8 +857,96 @@ def api_convergence_metrics():
 
 
 # ==========================================
+# 6. LOGIN & DATA UPLOAD ACTIONS
+# ==========================================
+
+@app.route("/login")
+def login_page():
+    """Render the Owner Login Page."""
+    return render_template("login.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def api_login():
+    """Handle Owner Login verification."""
+    data = request.get_json() or {}
+    username = data.get("username")
+    password = data.get("password")
+    
+    if username == "admin" and password == "admin123":
+        session["logged_in"] = True
+        return jsonify({"success": True, "redirect": "/"})
+    return jsonify({"success": False, "error": "Invalid Owner Credentials."}), 401
+
+
+@app.route("/api/logout", methods=["POST"])
+def api_logout():
+    """Owner logout endpoint."""
+    session.pop("logged_in", None)
+    return jsonify({"success": True})
+
+
+@app.route("/api/check-auth")
+def api_check_auth():
+    """Verify owner authentication state."""
+    return jsonify({"authenticated": bool(session.get("logged_in"))})
+
+
+@app.route("/api/upload-kb", methods=["POST"])
+def api_upload_kb():
+    """
+    Ingest a Q&A text file and parse its contents.
+    Creates new RAG database entries from Q&A pairs.
+    """
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "error": "Unauthorized owner session."}), 401
+        
+    if 'file' not in request.files:
+        return jsonify({"success": False, "error": "No file uploaded."}), 400
+        
+    file = request.files['file']
+    if not file or file.filename == '':
+        return jsonify({"success": False, "error": "Empty filename."}), 400
+        
+    try:
+        content = file.read().decode('utf-8')
+        lines = content.split('\n')
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        current_q = None
+        imported_count = 0
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            if line.lower().startswith('q:') or line.lower().startswith('question:'):
+                current_q = line.split(':', 1)[1].strip()
+            elif (line.lower().startswith('a:') or line.lower().startswith('answer:')) and current_q:
+                current_a = line.split(':', 1)[1].strip()
+                # Insert parsed Q&A pair directly into SQLite books database!
+                cursor.execute("""
+                    INSERT INTO books (title, author, category, shelf_location, available, description)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (current_q, "Owner Ingestion", "RAG Knowledge", "AI Datasets", 1, current_a))
+                imported_count += 1
+                current_q = None
+                
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "count": imported_count, "message": f"Successfully ingested {imported_count} Q&A conversation pairs."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+# ==========================================
 # SERVER STARTUP
 # ==========================================
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("FLASK_PORT", 5000))

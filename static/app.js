@@ -70,24 +70,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-    let ownerLoggedIn = localStorage.getItem("owner_logged_in") === "true";
-
     navItems.forEach(item => {
-        item.addEventListener("click", () => {
+        item.addEventListener("click", async () => {
             const targetTab = item.getAttribute("data-tab");
 
-            // Prompt for Owner/Admin Portal password
-            if ((targetTab === "catalog-tab" || targetTab === "logs-tab") && !ownerLoggedIn) {
-                const pw = prompt("Please enter the Owner Admin password to unlock the portal:");
-                if (pw === "admin123") {
-                    ownerLoggedIn = true;
-                    localStorage.setItem("owner_logged_in", "true");
-                    alert("Owner Portal unlocked successfully.");
-                } else {
-                    alert("Access Denied: Invalid password.");
+            // Verify owner authentication on server
+            if (targetTab === "catalog-tab" || targetTab === "logs-tab") {
+                try {
+                    const res = await fetch("/api/check-auth");
+                    const authData = await res.json();
+                    if (!authData.authenticated) {
+                        alert("Owner Portal is locked. Redirecting to starting Sign In page...");
+                        window.location.href = "/login";
+                        return;
+                    }
+                } catch (err) {
+                    console.error("Auth check failed", err);
                     return;
                 }
             }
+
 
             navItems.forEach(n => n.classList.remove("active"));
             tabContents.forEach(tc => tc.classList.remove("active"));
@@ -839,5 +841,63 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // Dataset file upload handlers
+    const kbFileInput = document.getElementById("kb-file-input");
+    const selectedFileName = document.getElementById("selected-file-name");
+    const submitUploadBtn = document.getElementById("submit-upload-btn");
+    const uploadKbForm = document.getElementById("upload-kb-form");
+
+    if (kbFileInput) {
+        kbFileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                selectedFileName.textContent = file.name;
+                submitUploadBtn.disabled = false;
+            } else {
+                selectedFileName.textContent = "No file chosen";
+                submitUploadBtn.disabled = true;
+            }
+        });
+    }
+
+    if (uploadKbForm) {
+        uploadKbForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const file = kbFileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("file", file);
+
+            submitUploadBtn.disabled = true;
+            submitUploadBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Ingesting Dataset...`;
+
+            try {
+                const res = await fetch("/api/upload-kb", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    uploadKbForm.reset();
+                    selectedFileName.textContent = "No file chosen";
+                    submitUploadBtn.disabled = true;
+                    fetchInventory(); // Reload inventory table
+                } else {
+                    alert("Upload Failed: " + data.error);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Upload failed due to network connection error.");
+            } finally {
+                submitUploadBtn.disabled = false;
+                submitUploadBtn.innerHTML = `<i class="fa-solid fa-upload"></i> Import Q&A Dataset`;
+            }
+        });
+    }
 });
+
 

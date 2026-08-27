@@ -253,8 +253,26 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <div class="kb-section" style="margin-top: 32px; border-top: 1px solid var(--border-glass); padding-top: 24px;">
+                        <h4 style="margin-bottom: 8px;"><i class="fa-solid fa-file-import"></i> Ingest Q&A Dataset File</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+                            Upload a plain text file containing Q&A pairs (structured with <code>Question: ...</code> and <code>Answer: ...</code> or <code>Q: ...</code> and <code>A: ...</code>) to batch insert custom AI chatbot training dataset rules.
+                        </p>
+                        <form id="upload-kb-form" style="display: flex; gap: 12px; align-items: center;">
+                            <input type="file" id="kb-file-input" accept=".txt" style="display: none;">
+                            <button type="button" class="btn secondary-btn" onclick="document.getElementById('kb-file-input').click()">
+                                <i class="fa-solid fa-folder-open"></i> Choose File...
+                            </button>
+                            <span id="selected-file-name" style="font-size: 0.9rem; color: var(--text-muted);">No file chosen</span>
+                            <button type="submit" class="btn primary-btn" id="submit-upload-btn" disabled>
+                                <i class="fa-solid fa-upload"></i> Import Q&A Dataset
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </section>
+
 
             <!-- TAB 4: CALL LOGS -->
             <section class="tab-content" id="logs-tab">
