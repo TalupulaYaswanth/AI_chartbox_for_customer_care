@@ -98,8 +98,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (pageHeaders[targetTab]) {
-                pageTitle.textContent = pageHeaders[targetTab].title;
-                pageDesc.textContent = pageHeaders[targetTab].desc;
+                if (pageTitle) pageTitle.textContent = pageHeaders[targetTab].title;
+                if (pageDesc) pageDesc.textContent = pageHeaders[targetTab].desc;
             }
 
             if (targetTab === "outbound-tab") fetchCustomers();
@@ -107,6 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (targetTab === "logs-tab") fetchLogs();
         });
     });
+
 
 
 
@@ -165,18 +166,21 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("stt-status-badge").innerHTML = "<i class='fa-solid fa-triangle-exclamation'></i> STT Unavailable";
     }
 
-    micBtn.addEventListener("click", () => {
-        if (!recognition) {
-            alert("Web Speech API is not supported in this browser. Please use Chrome or Edge.");
-            return;
-        }
+    if (micBtn) {
+        micBtn.addEventListener("click", () => {
+            if (!recognition) {
+                alert("Web Speech API is not supported in this browser. Please use Chrome or Edge.");
+                return;
+            }
 
-        if (isListening) {
-            recognition.stop();
-        } else {
-            recognition.start();
-        }
-    });
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        });
+    }
+
 
     // Text-to-Speech (TTS) Helper
     function speakText(text) {
@@ -189,9 +193,12 @@ document.addEventListener("DOMContentLoaded", () => {
         window.speechSynthesis.speak(utterance);
     }
 
-    speakResponseBtn.addEventListener("click", () => {
-        if (lastSpokenText) speakText(lastSpokenText);
-    });
+    if (speakResponseBtn) {
+        speakResponseBtn.addEventListener("click", () => {
+            if (lastSpokenText) speakText(lastSpokenText);
+        });
+    }
+
 
 
     // ==========================================
@@ -278,17 +285,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Manual search button
-    manualSearchBtn.addEventListener("click", () => {
-        const q = manualInput.value.trim();
-        if (q) {
-            liveTranscription.textContent = `"${q}" (Manual Search)`;
-            executeVoiceSearch(q);
-        }
-    });
+    if (manualSearchBtn) {
+        manualSearchBtn.addEventListener("click", () => {
+            const q = manualInput ? manualInput.value.trim() : "";
+            if (q) {
+                if (liveTranscription) liveTranscription.textContent = `"${q}" (Manual Search)`;
+                executeVoiceSearch(q);
+            }
+        });
+    }
 
-    manualInput.addEventListener("keyup", (e) => {
-        if (e.key === "Enter") manualSearchBtn.click();
-    });
+    if (manualInput && manualSearchBtn) {
+        manualInput.addEventListener("keyup", (e) => {
+            if (e.key === "Enter") manualSearchBtn.click();
+        });
+    }
+
 
     // Quick tag buttons
     document.querySelectorAll(".tag-btn").forEach(btn => {
@@ -304,27 +316,30 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     // 4. TWILIO CALL SIMULATOR
     // ==========================================
-    runSimBtn.addEventListener("click", async () => {
-        const speech = simSpeech.value.trim();
-        const phone = simPhone.value.trim();
+    if (runSimBtn) {
+        runSimBtn.addEventListener("click", async () => {
+            const speech = simSpeech ? simSpeech.value.trim() : "";
+            const phone = simPhone ? simPhone.value.trim() : "";
 
-        try {
-            const response = await fetch("/api/simulate-call", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ speech_text: speech, caller_number: phone })
-            });
+            try {
+                const response = await fetch("/api/simulate-call", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ speech_text: speech, caller_number: phone })
+                });
 
-            const data = await response.json();
-            if (data.success) {
-                twimlCodeOutput.textContent = data.twiml_xml;
-                simSpokenText.textContent = data.spoken_text;
-                speakText(data.spoken_text);
+                const data = await response.json();
+                if (data.success) {
+                    if (twimlCodeOutput) twimlCodeOutput.textContent = data.twiml_xml;
+                    if (simSpokenText) simSpokenText.textContent = data.spoken_text;
+                    speakText(data.spoken_text);
+                }
+            } catch (err) {
+                console.error("[SIMULATOR ERROR]", err);
             }
-        } catch (err) {
-            console.error("[SIMULATOR ERROR]", err);
-        }
-    });
+        });
+    }
+
 
 
     // ==========================================
@@ -377,16 +392,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    inventorySearch.addEventListener("input", (e) => {
-        const val = e.target.value.toLowerCase().trim();
-        const filtered = inventoryBooks.filter(b => 
-            b.title.toLowerCase().includes(val) || 
-            b.author.toLowerCase().includes(val) ||
-            b.category.toLowerCase().includes(val) ||
-            b.shelf_location.toLowerCase().includes(val)
-        );
-        renderInventoryTable(filtered);
-    });
+    if (inventorySearch) {
+        inventorySearch.addEventListener("input", (e) => {
+            const val = e.target.value.toLowerCase().trim();
+            const filtered = inventoryBooks.filter(b => 
+                b.title.toLowerCase().includes(val) || 
+                b.author.toLowerCase().includes(val) ||
+                b.category.toLowerCase().includes(val) ||
+                b.shelf_location.toLowerCase().includes(val)
+            );
+            renderInventoryTable(filtered);
+        });
+    }
+
 
     window.toggleBookAvailability = async (id, currentVal) => {
         const newVal = currentVal === 1 ? 0 : 1;
@@ -415,11 +433,13 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // Modal Add Book
-    openAddModalBtn.addEventListener("click", () => addModal.classList.add("active"));
-    closeModalBtn.addEventListener("click", () => addModal.classList.remove("active"));
-    cancelModalBtn.addEventListener("click", () => addModal.classList.remove("active"));
+    if (openAddModalBtn) openAddModalBtn.addEventListener("click", () => addModal.classList.add("active"));
+    if (closeModalBtn) closeModalBtn.addEventListener("click", () => addModal.classList.remove("active"));
+    if (cancelModalBtn) cancelModalBtn.addEventListener("click", () => addModal.classList.remove("active"));
 
-    addBookForm.addEventListener("submit", async (e) => {
+    if (addBookForm) {
+        addBookForm.addEventListener("submit", async (e) => {
+
         e.preventDefault();
         const newBookData = {
             title: document.getElementById("new-title").value,
@@ -445,7 +465,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
         }
+    }
     // Modal Edit Book
+
     const editModal = document.getElementById("edit-modal");
     const closeEditModalBtn = document.getElementById("close-edit-modal-btn");
     const cancelEditModalBtn = document.getElementById("cancel-edit-modal-btn");
