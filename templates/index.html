@@ -276,11 +276,13 @@
                                     <th>Matched Book Title</th>
                                     <th>Shelf Location</th>
                                     <th>Timestamp</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="logs-table-body">
-                                <tr><td colspan="7" class="loading-cell">Loading call logs...</td></tr>
+                                <tr><td colspan="8" class="loading-cell">Loading call logs...</td></tr>
                             </tbody>
+
                         </table>
                     </div>
                 </div>
@@ -427,8 +429,47 @@
             </form>
         </div>
     </div>
-
+ 
+    <!-- Modal for Editing Existing Record -->
+    <div class="modal-backdrop" id="edit-modal">
+        <div class="modal-card glass-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-edit"></i> Edit Service Record</h3>
+                <button class="close-modal" id="close-edit-modal-btn">&times;</button>
+            </div>
+            <form id="edit-book-form">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label>Service Name *</label>
+                    <input type="text" id="edit-title" class="form-input" required placeholder="e.g. AC Repair">
+                </div>
+                <div class="form-group">
+                    <label>Technician / Specialist</label>
+                    <input type="text" id="edit-author" class="form-input" placeholder="e.g. John Doe">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="edit-category" class="form-input" placeholder="e.g. HVAC">
+                    </div>
+                    <div class="form-group">
+                        <label>Coverage Area *</label>
+                        <input type="text" id="edit-location" class="form-input" required placeholder="e.g. Sector 5">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="edit-desc" class="form-input" rows="2" placeholder="Brief summary..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn secondary-btn" id="cancel-edit-modal-btn">Cancel</button>
+                    <button type="submit" class="btn primary-btn"><i class="fa-solid fa-save"></i> Save Updates</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
+

@@ -477,17 +477,31 @@ def api_book_detail(book_id):
         
     # PUT method
     data = request.get_json() or {}
-    available = 1 if data.get("available", True) else 0
+    title = data.get("title")
+    author = data.get("author")
+    category = data.get("category")
     shelf_location = data.get("shelf_location")
+    available = 1 if data.get("available", True) else 0
+    description = data.get("description")
     
-    if shelf_location:
-        cursor.execute("UPDATE books SET available = ?, shelf_location = ? WHERE id = ?", (available, shelf_location, book_id))
+    if title or author or category or shelf_location or description:
+        cursor.execute("""
+            UPDATE books 
+            SET title = COALESCE(?, title),
+                author = COALESCE(?, author),
+                category = COALESCE(?, category),
+                shelf_location = COALESCE(?, shelf_location),
+                available = ?,
+                description = COALESCE(?, description)
+            WHERE id = ?
+        """, (title, author, category, shelf_location, available, description, book_id))
     else:
         cursor.execute("UPDATE books SET available = ? WHERE id = ?", (available, book_id))
         
     conn.commit()
     conn.close()
-    return jsonify({"success": True, "message": "Book updated successfully."})
+    return jsonify({"success": True, "message": "Service catalog record updated."})
+
 
 
 @app.route("/api/logs", methods=["GET"])

@@ -70,15 +70,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+    let ownerLoggedIn = localStorage.getItem("owner_logged_in") === "true";
+
     navItems.forEach(item => {
         item.addEventListener("click", () => {
             const targetTab = item.getAttribute("data-tab");
+
+            // Prompt for Owner/Admin Portal password
+            if ((targetTab === "catalog-tab" || targetTab === "logs-tab") && !ownerLoggedIn) {
+                const pw = prompt("Please enter the Owner Admin password to unlock the portal:");
+                if (pw === "admin123") {
+                    ownerLoggedIn = true;
+                    localStorage.setItem("owner_logged_in", "true");
+                    alert("Owner Portal unlocked successfully.");
+                } else {
+                    alert("Access Denied: Invalid password.");
+                    return;
+                }
+            }
 
             navItems.forEach(n => n.classList.remove("active"));
             tabContents.forEach(tc => tc.classList.remove("active"));
 
             item.classList.add("active");
-            document.getElementById(targetTab).classList.add("active");
+            if (document.getElementById(targetTab)) {
+                document.getElementById(targetTab).classList.add("active");
+            }
 
             if (pageHeaders[targetTab]) {
                 pageTitle.textContent = pageHeaders[targetTab].title;
@@ -90,6 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (targetTab === "logs-tab") fetchLogs();
         });
     });
+
 
 
 
@@ -327,7 +345,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderInventoryTable(books) {
         if (!books || books.length === 0) {
-            inventoryTableBody.innerHTML = `<tr><td colspan="7" class="loading-cell">No books found in inventory.</td></tr>`;
+            inventoryTableBody.innerHTML = `<tr><td colspan="7" class="loading-cell">No services found in inventory.</td></tr>`;
             return;
         }
 
@@ -343,17 +361,21 @@ document.addEventListener("DOMContentLoaded", () => {
                             onclick="toggleBookAvailability(${book.id}, ${book.available})"
                             style="border:none; cursor:pointer;"
                             title="Click to toggle status">
-                        ${book.available === 1 ? 'Available' : 'Checked Out'}
+                        ${book.available === 1 ? 'Available' : 'Unavailable'}
                     </button>
                 </td>
                 <td>
-                    <button class="btn icon-btn" onclick="deleteBook(${book.id})" style="color:var(--danger);" title="Delete Book">
+                    <button class="btn icon-btn" onclick="openEditModal(${book.id})" style="color:var(--primary); margin-right:8px;" title="Edit Service">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="btn icon-btn" onclick="deleteBook(${book.id})" style="color:var(--danger);" title="Delete Record">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </td>
             </tr>
         `).join("");
     }
+
 
     inventorySearch.addEventListener("input", (e) => {
         const val = e.target.value.toLowerCase().trim();
@@ -423,7 +445,58 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error(err);
         }
-    });
+    // Modal Edit Book
+    const editModal = document.getElementById("edit-modal");
+    const closeEditModalBtn = document.getElementById("close-edit-modal-btn");
+    const cancelEditModalBtn = document.getElementById("cancel-edit-modal-btn");
+    const editBookForm = document.getElementById("edit-book-form");
+
+    window.openEditModal = (id) => {
+        const book = inventoryBooks.find(b => b.id === id);
+        if (!book) return;
+        
+        document.getElementById("edit-id").value = book.id;
+        document.getElementById("edit-title").value = book.title;
+        document.getElementById("edit-author").value = book.author || "";
+        document.getElementById("edit-category").value = book.category || "";
+        document.getElementById("edit-location").value = book.shelf_location || "";
+        document.getElementById("edit-desc").value = book.description || "";
+        
+        editModal.classList.add("active");
+    };
+
+    if (closeEditModalBtn) closeEditModalBtn.addEventListener("click", () => editModal.classList.remove("active"));
+    if (cancelEditModalBtn) cancelEditModalBtn.addEventListener("click", () => editModal.classList.remove("active"));
+
+    if (editBookForm) {
+        editBookForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const id = document.getElementById("edit-id").value;
+            const updatedData = {
+                title: document.getElementById("edit-title").value,
+                author: document.getElementById("edit-author").value,
+                category: document.getElementById("edit-category").value,
+                shelf_location: document.getElementById("edit-location").value,
+                description: document.getElementById("edit-desc").value
+            };
+
+            try {
+                const res = await fetch(`/api/books/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(updatedData)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    editModal.classList.remove("active");
+                    fetchInventory();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
+
 
 
     // ==========================================
@@ -443,7 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function renderLogsTable(logs) {
         if (!logs || logs.length === 0) {
-            logsTableBody.innerHTML = `<tr><td colspan="7" class="loading-cell">No voice call or search logs recorded yet.</td></tr>`;
+            logsTableBody.innerHTML = `<tr><td colspan="8" class="loading-cell">No voice call or search logs recorded yet.</td></tr>`;
             return;
         }
 
@@ -456,11 +529,48 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${log.matched_title || '<span style="color:var(--text-muted);">No match</span>'}</td>
                 <td>${log.matched_location || '-'}</td>
                 <td><span style="font-size:0.8rem; color:var(--text-muted);">${log.timestamp}</span></td>
+                <td>
+                    <button class="btn icon-btn" onclick="downloadLogScript(${log.id}, '${encodeURIComponent(log.channel)}', '${encodeURIComponent(log.caller_number || 'Web')}', '${encodeURIComponent(log.transcription)}', '${encodeURIComponent(log.matched_title || 'None')}', '${encodeURIComponent(log.matched_location || '-')}', '${encodeURIComponent(log.timestamp)}')" style="color:var(--primary);" title="Download Script">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                </td>
             </tr>
         `).join("");
     }
 
+    window.downloadLogScript = (id, channel, caller, transcript, matched, location, timestamp) => {
+        channel = decodeURIComponent(channel);
+        caller = decodeURIComponent(caller);
+        transcript = decodeURIComponent(transcript);
+        matched = decodeURIComponent(matched);
+        location = decodeURIComponent(location);
+        timestamp = decodeURIComponent(timestamp);
+
+        const lines = [
+            `=========================================`,
+            `Apex AI Call Center Conversation Transcript`,
+            `Log ID: #${id}`,
+            `Timestamp: ${timestamp}`,
+            `Channel: ${channel}`,
+            `Caller/Origin: ${caller}`,
+            `=========================================`,
+            `[Caller Statement]: "${transcript}"`,
+            `[AI RAG Database Match]: "${matched}"`,
+            `[Assigned Area/Location]: ${location}`,
+            `=========================================`
+        ];
+
+        const blob = new Blob([lines.join("\r\n")], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `call_log_transcript_${id}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     refreshLogsBtn.addEventListener("click", fetchLogs);
+
 
 
     // ==========================================

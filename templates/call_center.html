@@ -9,21 +9,22 @@
         @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
         :root {
-            --bg: #030712;
-            --surface: rgba(17, 24, 39, 0.7);
-            --border-glass: rgba(255, 255, 255, 0.08);
-            --primary: #6366f1;
-            --primary-glow: rgba(99, 102, 241, 0.3);
-            --accent: #06b6d4;
-            --accent-glow: rgba(6, 182, 212, 0.3);
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
-            --success: #10b981;
-            --danger: #ef4444;
+            --bg: #000000;
+            --surface: rgba(18, 18, 18, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --primary: #ffffff;
+            --primary-glow: rgba(255, 255, 255, 0.15);
+            --accent: #f3f4f6;
+            --accent-glow: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --success: #ffffff;
+            --danger: #ff3b30;
             --radius-lg: 16px;
             --radius-md: 12px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition: all 0.25s ease;
         }
+
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { background: var(--bg); color: var(--text-main); font-family: 'IBM Plex Sans', sans-serif; overflow-x: hidden; height: 100%; }
@@ -106,16 +107,82 @@
             border: 1px solid var(--border-glass);
             border-radius: var(--radius-md);
             padding: 20px; font-family: 'IBM Plex Mono', monospace;
-            height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;
-            font-size: 0.9rem;
+        .chat-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            height: 380px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .log-entry { display: flex; gap: 10px; line-height: 1.4; }
-        .log-time { color: var(--accent); min-width: 80px; }
-        .log-text.system { color: var(--text-muted); }
-        .log-text.caller { color: var(--primary); }
-        .log-text.ai { color: var(--success); }
-        .log-text.error { color: var(--danger); }
+        .bubble {
+            display: flex;
+            flex-direction: column;
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .bubble.caller {
+            align-self: flex-end;
+            background: var(--primary);
+            color: #000000;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bubble.ai {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid var(--border-glass);
+            border-bottom-left-radius: 2px;
+        }
+
+        .bubble.system {
+            align-self: center;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            font-size: 0.8rem;
+            font-family: 'IBM Plex Mono', monospace;
+            padding: 4px 8px;
+            text-align: center;
+            max-width: 100%;
+        }
+
+        .bubble-meta {
+            font-size: 0.7rem;
+            margin-bottom: 4px;
+            opacity: 0.6;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bubble.caller .bubble-meta {
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .bubble.ai .bubble-meta {
+            color: var(--text-muted);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+        .secondary-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
 
         /* RAG data card */
         .kb-section {
@@ -191,21 +258,26 @@
                 </div>
             </div>
 
-            <!-- Right Panel: Live Call Terminal Logs -->
+            <!-- Right Panel: Live Conversation Chat Screen -->
             <div class="glass-card">
-                <div class="card-title">
-                    <i class="fa-solid fa-terminal"></i> Live Call Telemetry Console
+                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
+                    <div class="card-title" style="margin: 0; font-size: 1.15rem;">
+                        <i class="fa-solid fa-comments"></i> Live Dialogue Screen
+                    </div>
+                    <button class="btn secondary-btn" id="download-script-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; box-shadow: none;" disabled>
+                        <i class="fa-solid fa-download"></i> Download Script
+                    </button>
                 </div>
-                <div class="console" id="console-logs">
-                    <div class="log-entry">
-                        <span class="log-time">System</span>
-                        <span class="log-text system">Waiting to initiate call campaign...</span>
+                <div class="chat-container" id="console-logs">
+                    <div class="bubble system">
+                        Waiting to initiate call campaign...
                     </div>
                 </div>
-                <div style="font-size:0.8rem; color:var(--text-muted); line-height: 1.5;">
-                    <i class="fa-solid fa-info-circle"></i> When a call is active, you will see real-time speech transcription from <strong>Deepgram</strong> and RAG response streams from <strong>Claude 3.5 Sonnet</strong>.
+                <div style="font-size:0.8rem; color:var(--text-muted); line-height: 1.5; margin-top: 8px;">
+                    <i class="fa-solid fa-info-circle"></i> Active call transcripts will display front and center. You can download the full customer conversation history above.
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -213,21 +285,51 @@
         const callForm = document.getElementById("call-form");
         const consoleLogs = document.getElementById("console-logs");
         const submitCallBtn = document.getElementById("submit-call-btn");
+        const downloadBtn = document.getElementById("download-script-btn");
+
+        let callTranscript = [];
+        let recognition = null;
+        let isCallActive = false;
 
         function addLog(speaker, text, type = "system") {
-            const time = new Date().toLocaleTimeString();
-            const entry = document.createElement("div");
-            entry.className = "log-entry";
-            entry.innerHTML = `
-                <span class="log-time">${time}</span>
-                <span class="log-text ${type}"><strong>${speaker}:</strong> ${text}</span>
-            `;
-            consoleLogs.appendChild(entry);
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            if (type !== 'system' && type !== 'error') {
+                callTranscript.push(`[${time}] ${speaker}: ${text.replace("TRANSFER_CALL", "")}`);
+                if (downloadBtn) downloadBtn.disabled = false;
+            } else {
+                callTranscript.push(`[${time}] SYSTEM: ${text}`);
+            }
+
+            const bubble = document.createElement("div");
+            bubble.className = `bubble ${type}`;
+            
+            if (type === "system" || type === "error") {
+                bubble.innerHTML = text;
+            } else {
+                bubble.innerHTML = `
+                    <span class="bubble-meta">${speaker} &bull; ${time}</span>
+                    <span>${text.replace("TRANSFER_CALL", "")}</span>
+                `;
+            }
+            
+            consoleLogs.appendChild(bubble);
             consoleLogs.scrollTop = consoleLogs.scrollHeight;
         }
 
-        let recognition = null;
-        let isCallActive = false;
+        if (downloadBtn) {
+            downloadBtn.addEventListener("click", () => {
+                if (callTranscript.length === 0) return;
+                const blob = new Blob([callTranscript.join("\r\n")], { type: "text/plain;charset=utf-8" });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = `call_transcript_${new Date().toISOString().slice(0,10)}.txt`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
 
         function startCallSimulation(clientName) {
             if (isCallActive) return;
