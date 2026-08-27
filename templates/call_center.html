@@ -226,6 +226,116 @@
             consoleLogs.scrollTop = consoleLogs.scrollHeight;
         }
 
+        let recognition = null;
+        let isCallActive = false;
+
+        function startCallSimulation(clientName) {
+            if (isCallActive) return;
+            isCallActive = true;
+            
+            addLog("System", `📞 Call connected (Local Simulation Mode)...`, "system");
+            
+            // Speak greeting
+            const greeting = `Hello ${clientName}! This is an automated follow-up call from Apex Home Services. Please say what service or repair job you need help with.`;
+            addLog("AI Agent", greeting, "ai");
+            speakText(greeting, () => {
+                startListening(clientName);
+            });
+        }
+
+        function speakText(text, callback) {
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text.replace("TRANSFER_CALL", ""));
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                if (callback) {
+                    utterance.onend = callback;
+                }
+                window.speechSynthesis.speak(utterance);
+            } else if (callback) {
+                callback();
+            }
+        }
+
+        function startListening(clientName) {
+            if (!isCallActive) return;
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                addLog("System", "Web Speech API is not supported in this browser.", "error");
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = "en-US";
+
+            recognition.onstart = () => {
+                addLog("System", "🎙️ Listening to caller response...", "system");
+            };
+
+            recognition.onerror = (e) => {
+                console.error(e);
+                if (isCallActive) {
+                    setTimeout(() => startListening(clientName), 2000); // Retry loop
+                }
+            };
+
+            recognition.onresult = async (event) => {
+                const transcript = event.results[0][0].transcript;
+                addLog("Caller", transcript, "caller");
+                
+                // Query local backend API
+                try {
+                    const res = await fetch("/api/search", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ query: transcript, channel: "Simulated Call" })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        let aiResponse = data.spoken_response;
+                        let triage = data.triage_decision || {};
+                        
+                        // Check handoff logic
+                        if (triage.assigned_cell_id === 16 || transcript.toLowerCase().includes("human") || transcript.toLowerCase().includes("representative")) {
+                            aiResponse = "I apologize, I am an AI assistant and I only have access to specific information regarding Apex Home Services. I cannot answer that, but I can forward your call to a human representative. TRANSFER_CALL";
+                        }
+                        
+                        addLog("AI Agent", aiResponse, "ai");
+                        
+                        speakText(aiResponse, () => {
+                            if (aiResponse.includes("TRANSFER_CALL")) {
+                                addLog("Handoff", "📞 Redirecting active call to human representative (+15550000000)...", "error");
+                                speakText("Please hold while I connect you to a human agent.", () => {
+                                    endCallSimulation();
+                                });
+                            } else {
+                                // Resume listening loop
+                                startListening(clientName);
+                            }
+                        });
+                    }
+                } catch (err) {
+                    addLog("Error", "Failed to query backend search API.", "error");
+                    startListening(clientName);
+                }
+            };
+
+            recognition.start();
+        }
+
+        function endCallSimulation() {
+            isCallActive = false;
+            if (recognition) {
+                recognition.stop();
+            }
+            addLog("System", "📞 Call disconnected.", "system");
+        }
+
         callForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             
@@ -238,6 +348,15 @@
             addLog("System", `Initiating outbound call request to ${name} (${phone})...`, "system");
 
             try {
+                // If ngrok is empty, treat as local simulated call directly
+                if (!ngrok) {
+                    addLog("System", "No Ngrok URL provided. Running local call center simulation...", "system");
+                    startCallSimulation(name);
+                    submitCallBtn.disabled = false;
+                    submitCallBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Initiate AI Agent Call`;
+                    return;
+                }
+
                 const res = await fetch("/api/outbound", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -246,8 +365,13 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    addLog("Twilio", `Call placed successfully! SID: ${data.call_sid}`, "ai");
-                    addLog("System", `Connecting Call Stream to WebSocket...`, "system");
+                    if (data.simulated) {
+                        addLog("Twilio", data.message, "ai");
+                        startCallSimulation(name);
+                    } else {
+                        addLog("Twilio", `Call placed successfully! SID: ${data.call_sid}`, "ai");
+                        addLog("System", `Connecting Call Stream to WebSocket...`, "system");
+                    }
                 } else {
                     addLog("Error", data.error, "error");
                 }
@@ -258,6 +382,7 @@
                 submitCallBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Initiate AI Agent Call`;
             }
         });
+
     </script>
 </body>
 </html>

@@ -84,9 +84,6 @@ async def api_trigger_outbound(request: Request):
     Trigger an outbound AI call to a customer's phone number.
     Twilio dials the customer and connects the call stream to our WebSocket.
     """
-    if not twilio_client:
-        return JSONResponse({"success": False, "error": "Twilio client is not configured. Check environment variables."}, 400)
-        
     data = await request.json()
     name = data.get("name", "Valued Customer")
     phone = data.get("phone")
@@ -94,8 +91,20 @@ async def api_trigger_outbound(request: Request):
     
     if not phone:
         return JSONResponse({"success": False, "error": "Phone number is required."}, 400)
+        
+    if not twilio_client:
+        # Fallback to local browser/console call center simulation mode
+        logger.info(f"[SIMULATED CALL] Outbound AI Call simulation triggered for {name} ({phone})")
+        return {
+            "success": True, 
+            "simulated": True, 
+            "call_sid": "sim-outbound-call-sid-12345",
+            "message": f"Twilio not configured. Initiating interactive call simulation in your browser for {name}..."
+        }
+        
     if not ngrok_url:
         return JSONResponse({"success": False, "error": "Ngrok public URL is required to receive the call stream webhook."}, 400)
+
         
     # Generate the initial TwiML webhook endpoint
     outbound_url = f"{ngrok_url}/voice-stream"
