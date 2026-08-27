@@ -30,9 +30,9 @@ body {
         radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.03) 0px, transparent 100%);
     background-attachment: fixed;
     color: var(--text-main);
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 
@@ -40,8 +40,10 @@ body {
 .app-container {
     display: flex;
     width: 100vw;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
+
 
 /* Sidebar Styling */
 .sidebar {
