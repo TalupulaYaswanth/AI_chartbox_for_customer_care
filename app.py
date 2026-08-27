@@ -71,6 +71,21 @@ def init_db():
         )
     """)
 
+    # Users Table for Owner Sign In / Sign Up
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            email TEXT
+        )
+    """)
+
+    # Seed default admin user if users table is empty
+    cursor.execute("SELECT COUNT(*) FROM users")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", ("admin", "admin123", "owner@gmail.com"))
+
     # Seed data if empty
     cursor.execute("SELECT COUNT(*) FROM books")
     if cursor.fetchone()[0] == 0:
@@ -866,17 +881,104 @@ def login_page():
     return render_template("login.html")
 
 
+import smtplib
+from email.mime.text import MIMEText
+
+def send_owner_login_alert_email(failed_username):
+    """
+    Sends a security alert email to the owner about a failed login attempt.
+    Utilizes Gmail SMTP credentials from .env, or falls back to log/database telemetry.
+    """
+    smtp_email = os.environ.get("SMTP_EMAIL")
+    smtp_password = os.environ.get("SMTP_PASSWORD")
+    owner_email = os.environ.get("OWNER_EMAIL", "owner@gmail.com")
+    
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    subject = "⚠️ Security Alert: Failed Login Attempt"
+    body = f"Alert: A failed login attempt was detected for username: '{failed_username}' at {timestamp}."
+    
+    # Also log to SQLite call_logs as a security alert
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO call_logs (channel, caller_number, transcription, matched_title, matched_location, available_status, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, ("Security Portal", "127.0.0.1", f"Failed login attempt for username: {failed_username}", "SECURITY WARNING", "Owner Notified", 0, timestamp))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Failed to log security warning: {e}")
+        
+    print(f"\n[SECURITY ALERT] {body} [Dispatched Alert Notification]\n")
+    
+    if smtp_email and smtp_password:
+        try:
+            msg = MIMEText(body)
+            msg['Subject'] = subject
+            msg['From'] = smtp_email
+            msg['To'] = owner_email
+            
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login(smtp_email, smtp_password)
+                server.sendmail(smtp_email, owner_email, msg.as_string())
+            print(f"[GMAIL SUCCESS] Sent email alert to {owner_email} successfully.")
+            return True
+        except Exception as e:
+            print(f"[GMAIL ERROR] Failed to send email via SMTP: {e}")
+    else:
+        print("[GMAIL NOTICE] No SMTP credentials in .env. Falling back to log/telemetry notification.")
+    return False
+
+
 @app.route("/api/login", methods=["POST"])
 def api_login():
-    """Handle Owner Login verification."""
+    """Handle Owner Login verification checking against the SQLite users dataset."""
     data = request.get_json() or {}
-    username = data.get("username")
-    password = data.get("password")
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
     
-    if username == "admin" and password == "admin123":
-        session["logged_in"] = True
-        return jsonify({"success": True, "redirect": "/"})
-    return jsonify({"success": False, "error": "Invalid Owner Credentials."}), 401
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        user = dict(row)
+        if user["password"] == password:
+            session["logged_in"] = True
+            return jsonify({"success": True, "redirect": "/"})
+            
+    # Send email alert to owner on invalid login!
+    send_owner_login_alert_email(username or "[Unknown]")
+    return jsonify({"success": False, "error": "Invalid Owner Credentials. Alert sent to owner."}), 401
+
+
+@app.route("/api/signup", methods=["POST"])
+def api_signup():
+    """Sign up a new owner/admin user, saving details into SQLite users dataset."""
+    data = request.get_json() or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+    email = data.get("email", "").strip() or "owner@gmail.com"
+    
+    if not username or not password:
+        return jsonify({"success": False, "error": "Username and password are required."}), 400
+        
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (username, password, email) VALUES (?, ?, ?)", (username, password, email))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "message": f"Owner registration successful for user: '{username}'."})
+    except sqlite3.IntegrityError:
+        return jsonify({"success": False, "error": "Username already exists in dataset."}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 @app.route("/api/logout", methods=["POST"])

@@ -16,6 +16,7 @@
             --text-main: #ffffff;
             --text-muted: #888888;
             --danger: #ff3b30;
+            --success: #34c759;
             --radius: 12px;
             --transition: all 0.25s ease;
         }
@@ -52,7 +53,7 @@
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 20px;
         }
 
         .login-header {
@@ -76,6 +77,31 @@
         .login-header p {
             font-size: 0.9rem;
             color: var(--text-muted);
+        }
+
+        .auth-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 10px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+            font-family: inherit;
+            font-size: 0.95rem;
+        }
+
+        .auth-tab.active {
+            color: #ffffff;
+            border-bottom-color: #ffffff;
         }
 
         .form-group {
@@ -129,16 +155,26 @@
             transform: translateY(-1px);
         }
 
-        .error-message {
-            background: rgba(255, 59, 48, 0.1);
-            border: 1px solid var(--danger);
-            color: var(--danger);
-            padding: 12px;
+        .alert-box {
             border-radius: 8px;
+            padding: 12px;
             font-size: 0.85rem;
             display: none;
             align-items: center;
             gap: 8px;
+            line-height: 1.4;
+        }
+
+        .alert-box.danger {
+            background: rgba(255, 59, 48, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .alert-box.success {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
         }
     </style>
 </head>
@@ -147,58 +183,116 @@
         <div class="login-header">
             <i class="fa-solid fa-microphone-lines"></i>
             <h2>Owner Portal Access</h2>
-            <p>Please log in to manage database and telemetry</p>
+            <p id="header-desc">Please log in to manage database and telemetry</p>
         </div>
 
-        <div class="error-message" id="error-box">
+        <!-- Toggle Tabs -->
+        <div class="auth-tabs">
+            <button type="button" class="auth-tab active" id="tab-signin">Sign In</button>
+            <button type="button" class="auth-tab" id="tab-signup">Sign Up</button>
+        </div>
+
+        <div class="alert-box danger" id="alert-box">
             <i class="fa-solid fa-triangle-exclamation"></i>
-            <span id="error-text">Invalid credentials</span>
+            <span id="alert-text">Invalid credentials</span>
         </div>
 
-        <form id="login-form">
+        <form id="auth-form">
             <div class="form-group" style="margin-bottom: 16px;">
                 <label for="username">Username</label>
                 <input type="text" id="username" class="form-input" placeholder="admin" required value="admin">
             </div>
+
+            <!-- Email field only visible on Sign Up -->
+            <div class="form-group" id="email-group" style="margin-bottom: 16px; display: none;">
+                <label for="email">Owner Gmail (For Alert Notifications)</label>
+                <input type="email" id="email" class="form-input" placeholder="owner@gmail.com">
+            </div>
+
             <div class="form-group" style="margin-bottom: 24px;">
                 <label for="password">Password</label>
                 <input type="password" id="password" class="form-input" placeholder="••••••••" required>
             </div>
-            <button type="submit" class="btn" id="login-btn">
-                <span>Sign In</span> <i class="fa-solid fa-arrow-right"></i>
+
+            <button type="submit" class="btn" id="submit-btn">
+                <span id="btn-text">Sign In</span> <i class="fa-solid fa-arrow-right"></i>
             </button>
         </form>
     </div>
 
     <script>
-        const loginForm = document.getElementById("login-form");
-        const errorBox = document.getElementById("error-box");
-        const errorText = document.getElementById("error-text");
+        const authForm = document.getElementById("auth-form");
+        const alertBox = document.getElementById("alert-box");
+        const alertText = document.getElementById("alert-text");
+        const tabSignin = document.getElementById("tab-signin");
+        const tabSignup = document.getElementById("tab-signup");
+        const emailGroup = document.getElementById("email-group");
+        const submitBtn = document.getElementById("submit-btn");
+        const btnText = document.getElementById("btn-text");
+        const headerDesc = document.getElementById("header-desc");
 
-        loginForm.addEventListener("submit", async (e) => {
+        let activeMode = "signin"; // "signin" or "signup"
+
+        tabSignin.addEventListener("click", () => {
+            activeMode = "signin";
+            tabSignin.classList.add("active");
+            tabSignup.classList.remove("active");
+            emailGroup.style.display = "none";
+            btnText.innerText = "Sign In";
+            headerDesc.innerText = "Please log in to manage database and telemetry";
+            alertBox.style.display = "none";
+        });
+
+        tabSignup.addEventListener("click", () => {
+            activeMode = "signup";
+            tabSignup.classList.add("active");
+            tabSignin.classList.remove("active");
+            emailGroup.style.display = "flex";
+            btnText.innerText = "Register & Sign Up";
+            headerDesc.innerText = "Register new administrator credentials in the dataset";
+            alertBox.style.display = "none";
+        });
+
+        authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const username = document.getElementById("username").value;
             const password = document.getElementById("password").value;
+            const email = document.getElementById("email").value;
+
+            const url = activeMode === "signin" ? "/api/login" : "/api/signup";
+            const bodyData = activeMode === "signin" 
+                ? { username, password }
+                : { username, password, email };
 
             try {
-                const res = await fetch("/api/login", {
+                const res = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify(bodyData)
                 });
                 const data = await res.json();
                 
-                if (data.success) {
-                    // Set local storage flag
-                    localStorage.setItem("owner_logged_in", "true");
-                    window.location.href = data.redirect || "/";
+                if (res.ok && data.success) {
+                    if (activeMode === "signin") {
+                        // Set local storage flag and redirect
+                        localStorage.setItem("owner_logged_in", "true");
+                        window.location.href = data.redirect || "/";
+                    } else {
+                        // Registration success - switch back to sign in with success alert
+                        alertBox.className = "alert-box success";
+                        alertText.innerText = data.message + " You can now sign in.";
+                        alertBox.style.display = "flex";
+                        tabSignin.click(); // Reset to signin view
+                    }
                 } else {
-                    errorText.innerText = data.error || "Authentication failed.";
-                    errorBox.style.display = "flex";
+                    alertBox.className = "alert-box danger";
+                    alertText.innerText = data.error || "Authentication failed.";
+                    alertBox.style.display = "flex";
                 }
             } catch (err) {
-                errorText.innerText = "Network error. Try again.";
-                errorBox.style.display = "flex";
+                alertBox.className = "alert-box danger";
+                alertText.innerText = "Network error. Please try again.";
+                alertBox.style.display = "flex";
             }
         });
     </script>
