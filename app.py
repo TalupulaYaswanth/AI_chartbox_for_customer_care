@@ -127,35 +127,37 @@ def init_db():
 
 def search_database(query_text):
     """
-    Search library database using flexible keyword matching (LIKE).
-    No complex AI required—pure SQL full-text keyword search.
+    Search service database using flexible keyword matching across title, category, author, and description.
     """
     if not query_text or not query_text.strip():
         return []
     
     clean_query = query_text.strip()
-    words = [w for w in clean_query.split() if len(w) > 2] # Filter short words like "is", "a", "in"
+    words = [w for w in clean_query.split() if len(w) > 1]
     
     conn = get_db()
     cursor = conn.cursor()
     
-    # 1. Exact or partial match on full title or category
+    # 1. Exact or partial match on full title, category, author, or description
     cursor.execute("""
         SELECT * FROM books 
-        WHERE title LIKE ? OR category LIKE ? OR author LIKE ?
+        WHERE title LIKE ? OR category LIKE ? OR author LIKE ? OR description LIKE ?
         ORDER BY available DESC, title ASC
-    """, (f"%{clean_query}%", f"%{clean_query}%", f"%{clean_query}%"))
+    """, (f"%{clean_query}%", f"%{clean_query}%", f"%{clean_query}%", f"%{clean_query}%"))
     results = [dict(row) for row in cursor.fetchall()]
     
     # 2. Fallback: Search individual keywords if no direct match found
     if not results and words:
-        like_clauses = " OR ".join(["title LIKE ?" for _ in words])
-        params = [f"%{w}%" for w in words]
+        like_clauses = " OR ".join(["(title LIKE ? OR category LIKE ? OR description LIKE ?)" for _ in words])
+        params = []
+        for w in words:
+            params.extend([f"%{w}%", f"%{w}%", f"%{w}%"])
         cursor.execute(f"SELECT * FROM books WHERE {like_clauses} ORDER BY available DESC", params)
         results = [dict(row) for row in cursor.fetchall()]
         
     conn.close()
     return results
+
 
 def ai_triage_decision(query_text):
     """
@@ -388,14 +390,24 @@ def handle_speech():
         # Log call event to database
         log_call("Twilio Voice", caller_number, transcription, best_match)
         
+        try:
+            from nlp_intent_model import predict_intent
+            nlp_res = predict_intent(transcription)
+        except Exception:
+            nlp_res = {}
+            
         if best_match:
             title = best_match["title"]
             location = best_match["shelf_location"]
             avail = "available for booking today" if best_match["available"] == 1 else "currently fully booked"
             say_text = f"We found {title}. It is covered in {location}, and is {avail}. Do you have any other questions or doubts?"
+        elif nlp_res.get("response") and nlp_res.get("tag") not in ["unknown", "exit"]:
+            say_text = f"{nlp_res['response']} Is there anything else I can help you with today?"
         else:
-            say_text = f"Sorry, we could not find any service records matching {transcription} in our service catalog. Is there another service you would like to ask about?"
+            say_text = "I can assist you with Air Conditioner Deep Clean ($85), 24/7 Emergency Plumbing & Leak Repairs ($95/hr), Smart Thermostat Setup ($150), Full House Deep Cleaning ($120), or Electrical Panel Upgrades ($1,200). Which of these services can I help you with?"
         should_hangup = False
+
+
     
     if TWILIO_AVAILABLE:
         response = VoiceResponse()
@@ -548,14 +560,23 @@ def api_search():
     results = search_database(query)
     best_match = results[0] if results else None
     
+    # Query NLP Intent Model
+    try:
+        from nlp_intent_model import predict_intent
+        nlp_res = predict_intent(query)
+    except Exception:
+        nlp_res = {}
+    
     # Log to SQLite
     log_call(channel, "Web Client", query, best_match)
     
     if best_match:
         status_str = "available for booking" if best_match["available"] == 1 else "currently booked"
         spoken_response = f"Found {best_match['title']}. Located at {best_match['shelf_location']}, and is {status_str}. Do you have any other questions or doubts?"
+    elif nlp_res.get("response") and nlp_res.get("tag") not in ["unknown", "exit"]:
+        spoken_response = f"{nlp_res['response']} Is there anything else I can help you with today?"
     else:
-        spoken_response = f"Sorry, no services matching '{query}' were found in our catalog. Do you have any other questions?"
+        spoken_response = "I can assist you with Air Conditioner Deep Clean ($85), 24/7 Emergency Plumbing & Leak Repairs ($95/hr), Smart Thermostat Setup ($150), Full House Deep Cleaning ($120), or Electrical Panel Upgrades ($1,200). Which of these services would you like assistance with?"
         
     return jsonify({
         "success": True,
@@ -564,8 +585,10 @@ def api_search():
         "all_results": results,
         "spoken_response": spoken_response,
         "call_ended": False,
-        "triage_decision": triage
+        "triage_decision": triage,
+        "nlp_intent": nlp_res
     })
+
 
 
 
