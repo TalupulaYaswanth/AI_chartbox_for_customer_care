@@ -432,48 +432,49 @@
                             body: JSON.stringify({ query: transcript, channel: "Simulated Call" })
                         });
                         const data = await res.json();
-
-                    
-                    if (data.success) {
-                        let aiResponse = data.spoken_response;
-                        let triage = data.triage_decision || {};
                         
-                        if (data.call_ended) {
-                            addLog("AI Agent", aiResponse, "ai");
-                            speakText(aiResponse, () => {
-                                addLog("System", "📞 Conversation concluded by caller. Goodbye!", "system");
-                                endCallSimulation();
-                            });
-                            return;
-                        }
-                        
-                        // Check handoff logic
-                        if (triage.assigned_cell_id === 16 && (transcript.toLowerCase().includes("human") || transcript.toLowerCase().includes("representative") || transcript.toLowerCase().includes("person"))) {
-                            aiResponse = "I apologize, I am an AI assistant and I only have access to specific information regarding Apex Home Services. I cannot answer that, but I can forward your call to a human representative. TRANSFER_CALL";
-                        }
-                        
-                        addLog("AI Agent", aiResponse, "ai");
-                        
-                        speakText(aiResponse, () => {
-                            if (aiResponse.includes("TRANSFER_CALL")) {
-                                addLog("Handoff", "📞 Redirecting active call to human representative (+15550000000)...", "error");
-                                speakText("Please hold while I connect you to a human agent.", () => {
+                        if (data.success) {
+                            let aiResponse = data.spoken_response;
+                            let triage = data.triage_decision || {};
+                            
+                            if (data.call_ended) {
+                                addLog("AI Agent", aiResponse, "ai");
+                                speakText(aiResponse, () => {
+                                    addLog("System", "📞 Conversation concluded by caller. Goodbye!", "system");
                                     endCallSimulation();
                                 });
-                            } else {
-                                // Resume listening loop
-                                startListening(clientName);
+                                return;
                             }
-                        });
+                            
+                            // Check handoff logic
+                            if (triage.assigned_cell_id === 16 && (transcript.toLowerCase().includes("human") || transcript.toLowerCase().includes("representative") || transcript.toLowerCase().includes("person"))) {
+                                aiResponse = "I apologize, I am an AI assistant and I only have access to specific information regarding Apex Home Services. I cannot answer that, but I can forward your call to a human representative. TRANSFER_CALL";
+                            }
+                            
+                            addLog("AI Agent", aiResponse, "ai");
+                            
+                            speakText(aiResponse, () => {
+                                if (aiResponse.includes("TRANSFER_CALL")) {
+                                    addLog("Handoff", "📞 Redirecting active call to human representative (+15550000000)...", "error");
+                                    speakText("Please hold while I connect you to a human agent.", () => {
+                                        endCallSimulation();
+                                    });
+                                } else {
+                                    // Resume listening loop
+                                    startListening(clientName);
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        addLog("Warning", "⚠️ Network glitch encountered. Retrying connection...", "error");
+                        setTimeout(() => startListening(clientName), 1500);
                     }
-                } catch (err) {
-                    addLog("Warning", "⚠️ Network glitch encountered. Retrying connection...", "error");
-                    setTimeout(() => startListening(clientName), 1500);
                 }
             };
 
             recognition.start();
         }
+
 
         function endCallSimulation() {
             isCallActive = false;
