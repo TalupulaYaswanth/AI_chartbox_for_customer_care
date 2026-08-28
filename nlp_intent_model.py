@@ -294,14 +294,15 @@ def predict_intent(sentence: str):
                 matched_response = random.choice(intent['responses'])
                 break
 
-    is_high_confidence = confidence > 0.40 and np.sum(bag) > 0
+    is_high_confidence = bool(confidence > 0.40 and float(np.sum(bag)) > 0.0)
 
     return {
-        "tag": tag if is_high_confidence else "unknown",
-        "confidence": round(confidence, 4),
-        "response": matched_response if is_high_confidence else None,
-        "is_high_confidence": is_high_confidence
+        "tag": str(tag) if is_high_confidence else "unknown",
+        "confidence": float(round(confidence, 4)),
+        "response": str(matched_response) if (is_high_confidence and matched_response) else None,
+        "is_high_confidence": bool(is_high_confidence)
     }
+
 
 
 if __name__ == "__main__":

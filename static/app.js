@@ -222,10 +222,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // ==========================================
-    // 3. SEARCH BACKEND EXECUTION & RESULT DISPLAY
-    // ==========================================
     async function executeVoiceSearch(queryText) {
         if (!queryText || !queryText.trim()) return;
+
+        // Instant visual feedback in 0ms
+        if (resultContainer) {
+            resultContainer.innerHTML = `
+                <div class="result-placeholder" style="padding: 24px; text-align: center;">
+                    <div style="font-size: 2.2rem; color: var(--primary); margin-bottom: 12px;">
+                        <i class="fa-solid fa-bolt-lightning fa-beat"></i>
+                    </div>
+                    <h4 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 6px;">Processing: "${queryText}"</h4>
+                    <span style="font-size: 0.85rem; color: var(--text-sub);">AI Neural Network is responding...</span>
+                </div>
+            `;
+        }
 
         try {
             const response = await fetch("/api/search", {

@@ -17,6 +17,17 @@ try:
 except ImportError:
     TWILIO_AVAILABLE = False
 
+# Warm up NLP Intent Model into RAM on server startup for 0ms instant inference
+try:
+    from nlp_intent_model import predict_intent, load_model_if_needed
+    load_model_if_needed()
+    NLP_MODEL_READY = True
+    print("[NLP READY] Intent Neural Network pre-loaded into RAM for ultra-fast instant responses.")
+except Exception as e:
+    print(f"[NLP WARMUP NOTICE]: {e}")
+    NLP_MODEL_READY = False
+
+
 
 
 # ==========================================
