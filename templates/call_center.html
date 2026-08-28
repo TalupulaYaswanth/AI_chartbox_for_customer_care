@@ -417,8 +417,17 @@
                         let aiResponse = data.spoken_response;
                         let triage = data.triage_decision || {};
                         
+                        if (data.call_ended) {
+                            addLog("AI Agent", aiResponse, "ai");
+                            speakText(aiResponse, () => {
+                                addLog("System", "📞 Conversation concluded by caller. Goodbye!", "system");
+                                endCallSimulation();
+                            });
+                            return;
+                        }
+                        
                         // Check handoff logic
-                        if (triage.assigned_cell_id === 16 || transcript.toLowerCase().includes("human") || transcript.toLowerCase().includes("representative")) {
+                        if (triage.assigned_cell_id === 16 && (transcript.toLowerCase().includes("human") || transcript.toLowerCase().includes("representative") || transcript.toLowerCase().includes("person"))) {
                             aiResponse = "I apologize, I am an AI assistant and I only have access to specific information regarding Apex Home Services. I cannot answer that, but I can forward your call to a human representative. TRANSFER_CALL";
                         }
                         
@@ -437,8 +446,8 @@
                         });
                     }
                 } catch (err) {
-                    addLog("Error", "Failed to query backend search API.", "error");
-                    startListening(clientName);
+                    addLog("Warning", "⚠️ Network glitch encountered. Retrying connection...", "error");
+                    setTimeout(() => startListening(clientName), 1500);
                 }
             };
 
