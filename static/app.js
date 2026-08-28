@@ -184,20 +184,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // Text-to-Speech (TTS) Helper
-    function speakText(text) {
+    // Text-to-Speech (TTS) Helper with Hands-Free Continuous Voice Loop
+    function speakText(text, autoListenAfter = false) {
         if (!("speechSynthesis" in window)) return;
         window.speechSynthesis.cancel(); // Stop current speech
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         utterance.lang = "en-US";
+        
+        if (autoListenAfter && recognition) {
+            utterance.onend = () => {
+                // When AI finishes speaking the question, automatically re-open microphone
+                // so the user can speak their follow-up answer or say "No" completely hands-free!
+                setTimeout(() => {
+                    if (!isListening) {
+                        try {
+                            recognition.start();
+                            micInstruction.textContent = "Listening for your answer... Speak now!";
+                        } catch (e) {
+                            console.log("Auto-listen trigger:", e);
+                        }
+                    }
+                }, 400);
+            };
+        }
+        
         window.speechSynthesis.speak(utterance);
     }
 
     if (speakResponseBtn) {
         speakResponseBtn.addEventListener("click", () => {
-            if (lastSpokenText) speakText(lastSpokenText);
+            if (lastSpokenText) speakText(lastSpokenText, false);
         });
     }
 
@@ -220,7 +238,11 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.success) {
                 renderResultCard(data);
                 lastSpokenText = data.spoken_response;
-                speakText(data.spoken_response);
+                
+                // If call is ended (user said "No" / "No doubts" / "Bye"), do not auto-listen.
+                // Otherwise, automatically activate mic to record user's follow-up answer!
+                const shouldListenForAnswer = !data.call_ended;
+                speakText(data.spoken_response, shouldListenForAnswer);
             } else {
                 alert("Search failed: " + data.message);
             }
@@ -234,6 +256,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const query = data.query;
         const spoken = data.spoken_response;
 
+        if (data.call_ended) {
+            resultContainer.className = "result-body";
+            resultContainer.innerHTML = `
+                <div class="result-card-details" style="text-align: center; padding: 32px 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 12px; color: var(--success);">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h4 style="font-size: 1.3rem; margin-bottom: 8px; color: var(--text-main);">Conversation Completed</h4>
+                    <p style="color: var(--text-sub); margin-bottom: 16px; font-size: 0.95rem;">"${spoken}"</p>
+                    <span class="status-badge available" style="font-size: 0.85rem; padding: 6px 14px;">
+                        <i class="fa-solid fa-phone-slash"></i> Call Ended (No further doubts)
+                    </span>
+                </div>
+            `;
+            return;
+        }
+
         if (match) {
             const isAvail = match.available === 1;
             resultContainer.className = "result-body";
@@ -242,15 +281,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="match-header">
                         <h4>${match.title}</h4>
                         <span class="status-badge ${isAvail ? 'available' : 'unavailable'}">
-                            ${isAvail ? 'Available' : 'Checked Out'}
+                            ${isAvail ? 'Available' : 'Booked'}
                         </span>
                     </div>
 
                     <div class="info-row">
-                        <label>Author:</label> <span>${match.author || 'N/A'}</span>
+                        <label>Category:</label> <span>${match.category || 'General'}</span>
                     </div>
                     <div class="info-row">
-                        <label>Category:</label> <span>${match.category || 'General'}</span>
+                        <label>Location/Area:</label> <span>${match.shelf_location || 'Main Shelf'}</span>
                     </div>
 
                     <div class="shelf-box">
@@ -259,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
 
                     <div class="info-row">
-                        <label>Description:</label> <span style="color: var(--text-muted);">${match.description || 'No description available.'}</span>
+                        <label>Details:</label> <span style="color: var(--text-sub);">${match.description || 'No description available.'}</span>
                     </div>
 
                     <div class="spoken-box">
@@ -276,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <h4 style="color: var(--warning);">No Direct Match Found</h4>
                         <span class="status-badge unavailable">Not Found</span>
                     </div>
-                    <p style="color: var(--text-muted); margin: 12px 0;">No books matching "${query}" were found in the database catalog.</p>
+                    <p style="color: var(--text-muted); margin: 12px 0;">No services matching "${query}" were found in the database catalog.</p>
                     <div class="spoken-box">
                         <strong><i class="fa-solid fa-volume-low"></i> Automated Voice Output:</strong><br>
                         "${spoken}"
@@ -285,6 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
         }
     }
+
 
     // Manual search button
     if (manualSearchBtn) {
