@@ -165,8 +165,16 @@ class VoiceLocatorTestCase(unittest.TestCase):
         self.assertTrue(data['success'])
         self.assertIn('spoken_script', data)
 
+    def test_14_pytorch_nlp_intent_model(self):
+        """Test PyTorch NLP Intent Classification model pipeline."""
+        from nlp_intent_model import predict_intent
+        res = predict_intent("I have a bathroom pipe leak")
+        self.assertIn(res["tag"], ["plumbing", "ac_repair", "unknown"])
+        self.assertGreater(res["confidence"], 0.0)
+
 if __name__ == '__main__':
     unittest.main()
+
 
 
 

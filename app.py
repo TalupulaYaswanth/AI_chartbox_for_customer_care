@@ -159,9 +159,8 @@ def search_database(query_text):
 
 def ai_triage_decision(query_text):
     """
-    Layer 3 & 4: AI Triage & Decision Routing Engine.
-    Parses the transcribed caller text, classifies intent/category, urgency, and assigns 
-    the specific worker cell (C01 - C24) to route the call.
+    Layer 3 & 4: AI Triage & Decision Routing Engine with PyTorch NLP Intent Model.
+    Classifies intent, confidence, urgency, and assigns the specific worker cell (C01 - C24).
     Returns structured decision JSON: { "category", "urgency", "confidence", "assigned_cell_id", "assigned_cell_role" }
     """
     if not query_text or not query_text.strip():
@@ -175,29 +174,46 @@ def ai_triage_decision(query_text):
         
     query_lower = query_text.lower()
     
-    # Classify intent & assign worker cell
-    if any(w in query_lower for w in ["physics", "science", "chemistry", "biology"]):
-        category = "Science Inquiry"
-        assigned_cell = 0 # Voice Search API Engine
-        confidence = 0.95
-    elif any(w in query_lower for w in ["calculus", "math", "algebra", "integral"]):
-        category = "Mathematics Inquiry"
-        assigned_cell = 3 # SQLite Catalog Searcher
-        confidence = 0.94
-    elif any(w in query_lower for w in ["computer", "code", "algorithm", "python", "data"]):
-        category = "Technology Inquiry"
-        assigned_cell = 8 # Keyword Matcher
-        confidence = 0.98
-    elif any(w in query_lower for w in ["history", "world", "war", "era"]):
-        category = "History Inquiry"
-        assigned_cell = 15 # Inventory Tracker
-        confidence = 0.92
-    else:
-        category = "General Library Query"
-        assigned_cell = 16 # Search Fallback Engine
+    # Query PyTorch Neural Network Intent Classifier
+    try:
+        from nlp_intent_model import predict_intent
+        nlp_res = predict_intent(query_text)
+        tag = nlp_res.get("tag", "unknown")
+        confidence = nlp_res.get("confidence", 0.90)
+    except Exception as e:
+        tag = "unknown"
         confidence = 0.85
         
-    urgency = "High" if ("urgent" in query_lower or "today" in query_lower) else "Standard"
+    # Map NLP tags to Category & Worker Cell
+    if tag == "greeting":
+        category = "Customer Greeting"
+        assigned_cell = 19 # Web Speech Bridge
+    elif tag == "ac_repair" or any(w in query_lower for w in ["ac", "air conditioner", "coolant", "hvac", "physics", "science"]):
+        category = "HVAC & AC Service Inquiry"
+        assigned_cell = 0 # Voice Search API Engine
+    elif tag == "plumbing" or any(w in query_lower for w in ["leak", "pipe", "plumb", "drain", "water"]):
+        category = "Emergency Plumbing Inquiry"
+        assigned_cell = 3 # SQLite Catalog Searcher
+    elif tag == "smart_thermostat" or any(w in query_lower for w in ["thermostat", "nest", "ecobee", "smart"]):
+        category = "Smart Thermostat & IoT Setup"
+        assigned_cell = 8 # Keyword Matcher
+    elif tag == "house_cleaning" or any(w in query_lower for w in ["clean", "maid", "house", "floor"]):
+        category = "House Deep Cleaning Inquiry"
+        assigned_cell = 15 # Inventory Tracker
+    elif tag == "electrical_panel" or any(w in query_lower for w in ["panel", "breaker", "electric", "charger", "code", "algorithm", "python"]):
+        category = "Electrical & Technical Inquiry"
+        assigned_cell = 13 # Call Routing Controller
+    elif tag == "human_representative":
+        category = "Human Agent Handoff"
+        assigned_cell = 13 # Call Routing Controller
+    elif tag == "exit":
+        category = "Session Completion"
+        assigned_cell = 16 # Search Fallback Engine
+    else:
+        category = "General Inquiry"
+        assigned_cell = 16 # Search Fallback Engine
+        
+    urgency = "High" if ("urgent" in query_lower or "emergency" in query_lower or "leak" in query_lower or "today" in query_lower) else "Standard"
     
     # Touch assigned worker cell and infrastructure cells
     touch_worker_cells([assigned_cell, 0, 1, 3, 10])
@@ -209,6 +225,7 @@ def ai_triage_decision(query_text):
         "assigned_cell_id": assigned_cell,
         "assigned_cell_role": WORKER_CELL_ROLES[assigned_cell]
     }
+
 
 def log_call(channel, caller_number, transcription, result):
 

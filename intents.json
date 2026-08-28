@@ -1,0 +1,137 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": [
+        "Hi",
+        "Hello",
+        "Hey",
+        "Good morning",
+        "Good afternoon",
+        "Is anyone there",
+        "Greetings",
+        "Hi there"
+      ],
+      "responses": [
+        "Hello! Welcome to Apex Home Services. How can I help you today?",
+        "Hi there! What service or maintenance job can I assist you with?",
+        "Greetings! How can I help with your home service needs?"
+      ]
+    },
+    {
+      "tag": "ac_repair",
+      "patterns": [
+        "I need AC repair",
+        "Air conditioner cleaning",
+        "AC is blowing warm air",
+        "Fix my air conditioner",
+        "Coolant leak in AC",
+        "How much is AC deep clean",
+        "Air conditioning service",
+        "HVAC maintenance"
+      ],
+      "responses": [
+        "Our Air Conditioner Deep Clean service is $85 per unit. It includes full dismantle, filter washing, coil sanitization, and coolant level checks.",
+        "We provide comprehensive AC repair and deep cleaning for $85 with certified technicians available today."
+      ]
+    },
+    {
+      "tag": "plumbing",
+      "patterns": [
+        "I have a pipe leak",
+        "Plumber needed urgently",
+        "Emergency pipe leak repair",
+        "Burst pipe in the bathroom",
+        "Water leaking from wall",
+        "Drain is clogged",
+        "Plumbing emergency",
+        "Need a plumber"
+      ],
+      "responses": [
+        "We offer 24/7 Emergency Pipe Leak Repair and Plumbing at $95 per hour. Technicians can arrive promptly.",
+        "Our licensed plumbers handle burst pipes, wall leaks, and drains 24/7 at $95/hour."
+      ]
+    },
+    {
+      "tag": "smart_thermostat",
+      "patterns": [
+        "Install smart thermostat",
+        "Nest thermostat setup",
+        "Ecobee configuration",
+        "Honeywell thermostat",
+        "IoT smart home thermostat",
+        "Thermostat installation cost"
+      ],
+      "responses": [
+        "We install and configure Nest, Ecobee, and Honeywell Smart Thermostats with scheduling for a $150 fixed rate.",
+        "Our Smart Thermostat & IoT Setup is $150 flat rate including app integration and scheduling."
+      ]
+    },
+    {
+      "tag": "house_cleaning",
+      "patterns": [
+        "Full house deep cleaning",
+        "Need house cleaning service",
+        "Clean my kitchen and bathrooms",
+        "Window and floor cleaning",
+        "Home deep clean flat rate",
+        "Maid cleaning services"
+      ],
+      "responses": [
+        "Our Full House Deep Cleaning service covers kitchens, bathrooms, floors, and windows for a $120 flat rate.",
+        "We provide complete top-to-bottom home deep cleaning at $120."
+      ]
+    },
+    {
+      "tag": "electrical_panel",
+      "patterns": [
+        "Main panel electrical upgrade",
+        "Upgrade breaker box",
+        "Circuit breaker tripping",
+        "EV charger electrical install",
+        "Solar electrical panel setup",
+        "Electrician needed"
+      ],
+      "responses": [
+        "Main Panel Electrical Upgrades are $1,200 to support high power loads, EV chargers, and solar setups.",
+        "Our licensed electricians perform 200-amp main panel upgrades for $1,200."
+      ]
+    },
+    {
+      "tag": "human_representative",
+      "patterns": [
+        "Speak to a human",
+        "Transfer to an agent",
+        "Talk to a real person",
+        "Customer service supervisor",
+        "Human representative please",
+        "Can I speak with a manager"
+      ],
+      "responses": [
+        "Certainly, let me forward your call to a human representative right away.",
+        "Transferring your call to our on-duty customer service supervisor immediately."
+      ]
+    },
+    {
+      "tag": "exit",
+      "patterns": [
+        "No",
+        "No thanks",
+        "No thank you",
+        "Nothing else",
+        "Nope",
+        "Bye",
+        "Goodbye",
+        "No doubts",
+        "I have no doubts",
+        "That's all",
+        "I am good",
+        "All done"
+      ],
+      "responses": [
+        "Thank you for contacting Apex Home Services. Have a wonderful day! Goodbye.",
+        "Thanks for calling! Feel free to reach back out if you need anything else. Goodbye!"
+      ]
+    }
+  ]
+}
