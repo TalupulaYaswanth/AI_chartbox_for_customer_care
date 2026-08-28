@@ -402,21 +402,18 @@ def handle_speech():
         log_call("Twilio Voice", caller_number, transcription, best_match)
         
         try:
-            from nlp_intent_model import predict_intent
-            nlp_res = predict_intent(transcription)
+            from universal_ai_brain import answer_universal_question
+            say_text = answer_universal_question(transcription, best_match)
         except Exception:
-            nlp_res = {}
-            
-        if best_match:
-            title = best_match["title"]
-            location = best_match["shelf_location"]
-            avail = "available for booking today" if best_match["available"] == 1 else "currently fully booked"
-            say_text = f"We found {title}. It is covered in {location}, and is {avail}. Do you have any other questions or doubts?"
-        elif nlp_res.get("response") and nlp_res.get("tag") not in ["unknown", "exit"]:
-            say_text = f"{nlp_res['response']} Is there anything else I can help you with today?"
-        else:
-            say_text = "I can assist you with Air Conditioner Deep Clean ($85), 24/7 Emergency Plumbing & Leak Repairs ($95/hr), Smart Thermostat Setup ($150), Full House Deep Cleaning ($120), or Electrical Panel Upgrades ($1,200). Which of these services can I help you with?"
+            if best_match:
+                title = best_match["title"]
+                location = best_match["shelf_location"]
+                avail = "available for booking today" if best_match["available"] == 1 else "currently fully booked"
+                say_text = f"We found {title}. It is covered in {location}, and is {avail}. Do you have any other questions or doubts?"
+            else:
+                say_text = "I can assist you with Air Conditioner Deep Clean ($85), 24/7 Emergency Plumbing & Leak Repairs ($95/hr), Smart Thermostat Setup ($150), Full House Deep Cleaning ($120), or Electrical Panel Upgrades ($1,200). Which of these services can I help you with?"
         should_hangup = False
+
 
 
     
@@ -581,13 +578,18 @@ def api_search():
     # Log to SQLite
     log_call(channel, "Web Client", query, best_match)
     
-    if best_match:
-        status_str = "available for booking" if best_match["available"] == 1 else "currently booked"
-        spoken_response = f"Found {best_match['title']}. Located at {best_match['shelf_location']}, and is {status_str}. Do you have any other questions or doubts?"
-    elif nlp_res.get("response") and nlp_res.get("tag") not in ["unknown", "exit"]:
-        spoken_response = f"{nlp_res['response']} Is there anything else I can help you with today?"
-    else:
-        spoken_response = "I can assist you with Air Conditioner Deep Clean ($85), 24/7 Emergency Plumbing & Leak Repairs ($95/hr), Smart Thermostat Setup ($150), Full House Deep Cleaning ($120), or Electrical Panel Upgrades ($1,200). Which of these services would you like assistance with?"
+    # Generate intelligent conversational answer using Universal AI Brain
+    try:
+        from universal_ai_brain import answer_universal_question
+        spoken_response = answer_universal_question(query, best_match)
+    except Exception:
+        if best_match:
+            status_str = "available for booking" if best_match["available"] == 1 else "currently booked"
+            spoken_response = f"Found {best_match['title']}. Located at {best_match['shelf_location']}, and is {status_str}. Do you have any other questions or doubts?"
+        elif nlp_res.get("response") and nlp_res.get("tag") not in ["unknown", "exit"]:
+            spoken_response = f"{nlp_res['response']} Is there anything else I can help you with today?"
+        else:
+            spoken_response = "I can assist you with Air Conditioner Deep Clean ($85), 24/7 Emergency Plumbing & Leak Repairs ($95/hr), Smart Thermostat Setup ($150), Full House Deep Cleaning ($120), or Electrical Panel Upgrades ($1,200). Which of these services would you like assistance with?"
         
     return jsonify({
         "success": True,
@@ -599,6 +601,7 @@ def api_search():
         "triage_decision": triage,
         "nlp_intent": nlp_res
     })
+
 
 
 

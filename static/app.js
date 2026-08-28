@@ -125,16 +125,21 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.interimResults = true;
         recognition.lang = "en-US";
 
-        recognition.onstart = () => {
-            isListening = true;
-            micBtn.classList.add("listening");
-            micStatusTag.textContent = "Listening...";
-            micStatusTag.classList.add("listening");
-            micInstruction.textContent = "Listening to your voice... Speak now!";
-            liveTranscription.textContent = "Processing speech audio...";
+        recognition.onspeechstart = () => {
+            // GOOGLE AI LIVE BARGE-IN: If AI is speaking when user starts talking, cut AI off immediately in 0ms!
+            if ("speechSynthesis" in window && window.speechSynthesis.speaking) {
+                console.log("[BARGE-IN] User interrupted AI speech. Stopping voice output immediately.");
+                window.speechSynthesis.cancel();
+                micInstruction.innerHTML = "<span style='color: var(--primary); font-weight: 600;'><i class='fa-solid fa-bolt'></i> Interrupted AI &mdash; Listening to your question...</span>";
+            }
         };
 
         recognition.onresult = (event) => {
+            // Instant barge-in cancellation on any interim speech tokens
+            if ("speechSynthesis" in window && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
             let transcript = "";
             for (let i = event.resultIndex; i < event.results.length; i++) {
                 transcript += event.results[i][0].transcript;
@@ -152,9 +157,11 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("[STT ERROR]:", event.error);
             isListening = false;
             micBtn.classList.remove("listening");
-            micStatusTag.textContent = "Error";
+            micStatusTag.textContent = "Ready";
             micStatusTag.classList.remove("listening");
-            micInstruction.textContent = `Speech recognition error: ${event.error}. Try again.`;
+            if (event.error !== "no-speech") {
+                micInstruction.textContent = `Listening stopped: ${event.error}. Press mic or speak to continue.`;
+            }
         };
 
         recognition.onend = () => {
@@ -177,41 +184,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (isListening) {
                 recognition.stop();
+                if ("speechSynthesis" in window) window.speechSynthesis.cancel();
             } else {
+                if ("speechSynthesis" in window) window.speechSynthesis.cancel();
                 recognition.start();
             }
         });
     }
 
 
-    // Text-to-Speech (TTS) Helper with Hands-Free Continuous Voice Loop
-    function speakText(text, autoListenAfter = false) {
+    // Text-to-Speech (TTS) Helper with Live Interruption & Hands-Free Loop
+    function speakText(text, autoListenAfter = true) {
         if (!("speechSynthesis" in window)) return;
         window.speechSynthesis.cancel(); // Stop current speech
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
+        
+        const cleanText = text.replace(/<[^>]*>?/gm, '');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.rate = 1.05;
         utterance.pitch = 1.0;
         utterance.lang = "en-US";
         
-        if (autoListenAfter && recognition) {
-            utterance.onend = () => {
-                // When AI finishes speaking the question, automatically re-open microphone
-                // so the user can speak their follow-up answer or say "No" completely hands-free!
+        // Immediately start/keep mic listening so caller can INTERRUPT AI at any point like Google Assistant!
+        if (recognition && !isListening) {
+            try {
+                recognition.start();
+                micInstruction.innerHTML = "<span style='color: var(--success);'><i class='fa-solid fa-microphone'></i> AI Speaking &mdash; Speak anytime to interrupt!</span>";
+            } catch (e) {
+                // Ignore already-started exceptions
+            }
+        }
+        
+        utterance.onend = () => {
+            if (autoListenAfter && recognition) {
                 setTimeout(() => {
                     if (!isListening) {
                         try {
                             recognition.start();
                             micInstruction.textContent = "Listening for your answer... Speak now!";
-                        } catch (e) {
-                            console.log("Auto-listen trigger:", e);
-                        }
+                        } catch (e) {}
                     }
-                }, 400);
-            };
-        }
+                }, 300);
+            }
+        };
         
         window.speechSynthesis.speak(utterance);
     }
+
 
     if (speakResponseBtn) {
         speakResponseBtn.addEventListener("click", () => {
