@@ -235,14 +235,55 @@ init_db()
 
 
 # ==========================================
-# 2. FRONTEND ROUTE
+# 2. SECURITY & AUTHENTICATION WALL
 # ==========================================
+PUBLIC_ENDPOINTS = {
+    "login_page",
+    "api_login",
+    "api_signup",
+    "api_check_auth",
+    "voice_entry",
+    "sms_webhook",
+    "handle_speech",
+    "outbound_greeting",
+    "static"
+}
+
+@app.before_request
+def enforce_route_security():
+    """
+    Global Security & Authentication Wall.
+    Blocks unauthorized users and hackers from entering admin portals,
+    call center pages, or querying internal APIs without valid authentication.
+    """
+    if request.endpoint in PUBLIC_ENDPOINTS or request.endpoint is None:
+        return None
+        
+    if not session.get("logged_in"):
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"\n[SECURITY BLOCKED] Unauthorized attempt to access '{request.path}' from {ip} at {timestamp}.\n")
+        
+        # If API endpoint, return 401 JSON error
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "success": False,
+                "error": "Access Denied: Authentication required. Please sign in."
+            }), 401
+            
+        # If web page, block and redirect to login
+        if request.path == "/":
+            return render_template("login.html")
+        return redirect("/login")
+
+
 @app.route("/")
 def index():
     """Render the dashboard & voice search web app."""
     if not session.get("logged_in"):
         return render_template("login.html")
     return render_template("index.html")
+
 
 
 
@@ -283,20 +324,47 @@ def voice_entry():
 </Response>"""
         return Response(xml_content, mimetype="text/xml")
 
+def is_exit_intent(text):
+    """Check if the caller or user wants to conclude the conversation."""
+    if not text:
+        return False
+    cleaned = text.lower().strip().rstrip(".,!?")
+    exit_phrases = {
+        "no", "no thanks", "no thank you", "nothing", "nothing else",
+        "nope", "bye", "goodbye", "no doubts", "no doubt", "done",
+        "all good", "that's all", "that is all", "im good", "i am good",
+        "no more", "stop", "exit", "quit", "thank you bye", "thanks bye",
+        "i have no doubts", "no doubts left", "no further questions"
+    }
+    if cleaned in exit_phrases:
+        return True
+    for phrase in ["no thanks", "no thank", "no doubt", "that's all", "that is all", "nothing else", "goodbye", "bye", "no more"]:
+        if phrase in cleaned:
+            return True
+    return False
+
 
 @app.route("/handle-speech", methods=["POST"])
 def handle_speech():
     """
-    Twilio Speech Handler.
-    Twilio posts the transcribed text in the 'SpeechResult' form field.
-    We query SQLite and return an automated spoken response to the customer over the call.
+    Twilio Multi-Turn Speech Handler.
+    Supports continuous 10-20+ minute interactive voice calls.
+    Answers caller inquiries, asks if they have any more questions,
+    and only hangs up when the user says 'No' / 'Nothing else' / 'Bye'.
     """
     touch_worker_cells([0, 1, 2, 4, 13, 14, 18])
     caller_number = request.form.get("From", "Unknown Caller")
     transcription = request.form.get("SpeechResult", "").strip()
     print(f"[TWILIO STT RECEIVED] From {caller_number}: '{transcription}'")
     
-    if transcription:
+    if not transcription:
+        say_text = "We did not hear any speech. Is there any service or question you would like to ask?"
+        should_hangup = False
+    elif is_exit_intent(transcription):
+        say_text = "Thank you for calling Apex Home Services. Have a wonderful day! Goodbye."
+        log_call("Twilio Voice", caller_number, transcription, None)
+        should_hangup = True
+    else:
         results = search_database(transcription)
         best_match = results[0] if results else None
         
@@ -307,25 +375,45 @@ def handle_speech():
             title = best_match["title"]
             location = best_match["shelf_location"]
             avail = "available for booking today" if best_match["available"] == 1 else "currently fully booked"
-            say_text = f"We found {title}. It is covered in {location}, and is {avail}."
+            say_text = f"We found {title}. It is covered in {location}, and is {avail}. Do you have any other questions or doubts?"
         else:
-            say_text = f"Sorry, we could not find any service records matching {transcription} in our service catalog."
-    else:
-        say_text = "Sorry, we could not process your speech input."
-        log_call("Twilio Voice", caller_number, "[No Speech Detected]", None)
-        
-    say_text += " Thank you for calling Apex Home Services. Goodbye."
+            say_text = f"Sorry, we could not find any service records matching {transcription} in our service catalog. Is there another service you would like to ask about?"
+        should_hangup = False
     
     if TWILIO_AVAILABLE:
         response = VoiceResponse()
-        response.say(say_text, voice="alice")
-        response.hangup()
+        if should_hangup:
+            response.say(say_text, voice="alice")
+            response.hangup()
+        else:
+            gather = Gather(
+                input="speech",
+                action="/handle-speech",
+                method="POST",
+                speech_timeout="auto",
+                timeout=6
+            )
+            gather.say(say_text, voice="alice")
+            response.append(gather)
+            # If caller says nothing after prompt, end call gracefully
+            response.say("Thank you for calling Apex Home Services. Goodbye.", voice="alice")
+            response.hangup()
         return Response(str(response), mimetype="text/xml")
 
     else:
-        xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+        if should_hangup:
+            xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">{say_text}</Say>
+    <Hangup/>
+</Response>"""
+        else:
+            xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather input="speech" action="/handle-speech" method="POST" speechTimeout="auto" timeout="6">
+        <Say voice="alice">{say_text}</Say>
+    </Gather>
+    <Say voice="alice">Thank you for calling Apex Home Services. Goodbye.</Say>
     <Hangup/>
 </Response>"""
         return Response(xml_content, mimetype="text/xml")
@@ -337,19 +425,24 @@ def sms_webhook():
     Twilio SMS Handler.
     Receives SMS message, queries database, and replies with SMS text.
     """
-    touch_worker_cells([3, 6, 8, 18])
-    caller_number = request.form.get("From", "Unknown")
-    message_body = request.form.get("Body", "").strip()
+    touch_worker_cells([1, 4, 8, 18])
+    incoming_msg = request.form.get("Body", "").strip()
+    sender_number = request.form.get("From", "Unknown Sender")
+    print(f"[TWILIO SMS RECEIVED] From {sender_number}: '{incoming_msg}'")
     
-    results = search_database(message_body)
-    best_match = results[0] if results else None
-    
-    log_call("Twilio SMS", caller_number, message_body, best_match)
-    
-    if best_match:
-        reply_text = f"🛠️ Apex Home Services:\nFound: {best_match['title']}\nArea: {best_match['shelf_location']}\nStatus: {'Available Today' if best_match['available'] == 1 else 'Fully Booked'}"
+    if incoming_msg:
+        results = search_database(incoming_msg)
+        best_match = results[0] if results else None
+        
+        # Log SMS query to SQLite
+        log_call("Twilio SMS", sender_number, incoming_msg, best_match)
+        
+        if best_match:
+            reply_text = f"Apex Home Services: Found '{best_match['title']}' in {best_match['shelf_location']} (Status: {'Available' if best_match['available'] == 1 else 'Booked'}). Reply with any other questions!"
+        else:
+            reply_text = f"Apex Home Services: No services found matching '{incoming_msg}'. Reply with another keyword or service name."
     else:
-        reply_text = f"🛠️ Apex Home Services:\nNo service matches found for '{message_body}'. Please reply with a service category like HVAC, Plumbing, or Electrical."
+        reply_text = "Apex Home Services: Send us a keyword (e.g., 'HVAC', 'Plumbing', 'Cleaning') to check availability."
         
     if TWILIO_AVAILABLE:
         resp = MessagingResponse()
@@ -382,7 +475,7 @@ def outbound_greeting():
             action="/handle-speech",
             method="POST",
             speech_timeout="auto",
-            timeout=5
+            timeout=6
         )
         gather.say(greeting, voice="alice")
         response.append(gather)
@@ -392,7 +485,7 @@ def outbound_greeting():
     else:
         xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech" action="/handle-speech" method="POST" speechTimeout="auto" timeout="5">
+    <Gather input="speech" action="/handle-speech" method="POST" speechTimeout="auto" timeout="6">
         <Say voice="alice">{greeting}</Say>
     </Gather>
     <Say voice="alice">We did not hear any speech input. Goodbye.</Say>
@@ -421,6 +514,19 @@ def api_search():
     if not query:
         return jsonify({"success": False, "message": "Query parameter is required."}), 400
         
+    if is_exit_intent(query):
+        spoken_response = "Thank you for contacting Apex Home Services. Have a great day! Goodbye."
+        log_call(channel, "Web Client", query, None)
+        return jsonify({
+            "success": True,
+            "query": query,
+            "best_match": None,
+            "all_results": [],
+            "spoken_response": spoken_response,
+            "call_ended": True,
+            "triage_decision": "Call Ended"
+        })
+        
     triage = ai_triage_decision(query)
     results = search_database(query)
     best_match = results[0] if results else None
@@ -429,10 +535,10 @@ def api_search():
     log_call(channel, "Web Client", query, best_match)
     
     if best_match:
-        status_str = "available for checkout" if best_match["available"] == 1 else "currently checked out"
-        spoken_response = f"Found {best_match['title']}. Located at {best_match['shelf_location']}, and is {status_str}."
+        status_str = "available for booking" if best_match["available"] == 1 else "currently booked"
+        spoken_response = f"Found {best_match['title']}. Located at {best_match['shelf_location']}, and is {status_str}. Do you have any other questions or doubts?"
     else:
-        spoken_response = f"Sorry, no library books matching '{query}' were found."
+        spoken_response = f"Sorry, no services matching '{query}' were found in our catalog. Do you have any other questions?"
         
     return jsonify({
         "success": True,
@@ -440,6 +546,7 @@ def api_search():
         "best_match": best_match,
         "all_results": results,
         "spoken_response": spoken_response,
+        "call_ended": False,
         "triage_decision": triage
     })
 
