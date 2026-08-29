@@ -1,5 +1,8 @@
+import os
+import csv
 import re
 import random
+
 
 # ==============================================================================
 # UNIVERSAL HOME SERVICE & GENERAL KNOWLEDGE INTELLIGENCE ENGINE
@@ -66,11 +69,38 @@ KNOWLEDGE_PATTERNS = [
         "Our Full House Deep Cleaning ($120) includes complete hand-wiping of baseboards, inside oven & microwave sanitization, bathroom grout scrub, window washing, and intensive floor treatment beyond standard surface dusting."
     ),
 
-    # 4. Human Representative Handoff
+    # 4. Product Delivery & Order Status Tracking Lifecycle
+    (
+        r"\b(order placed|placed an order|order confirmation|did my order go through|booking confirmed|new order)\b",
+        "Your order status is: Stage 1 - Order Placed! Your booking has been received and verified. Our dispatch team is currently assigning the nearest certified technician."
+    ),
+    (
+        r"\b(dispatched|is it dispatched|technician dispatched|product dispatched|has it been dispatched|dispatch status)\b",
+        "Your order status is: Stage 2 - Dispatched! The assigned service specialist has loaded the tools and parts, and departed our regional operations center."
+    ),
+    (
+        r"\b(on the way|is (it|technician|driver) on the way|in transit|heading to my address|how far)\b",
+        "Your order status is: Stage 3 - On The Way! Live GPS tracking confirms the technician is currently en route in a mobile service van, with an estimated arrival in 15 to 20 minutes."
+    ),
+    (
+        r"\b(out for delivery|out of delivery|delivery today|out for service|arriving today)\b",
+        "Your order status is: Stage 4 - Out For Delivery / Service! Our service vehicle is in your neighborhood and scheduled to arrive within your service window."
+    ),
+    (
+        r"\b(reached|has it reached|technician arrived|arrived at my door|delivered|order reached|driver reached)\b",
+        "Your order status is: Stage 5 - Reached / Delivered! The technician has arrived at your destination address and is ready to begin your home service."
+    ),
+    (
+        r"\b(track my order|where is my order|order status|tracking|check order|ord-\d+)\b",
+        "To check your live order tracking, please provide your Order ID (e.g. ORD-101) or customer name, and I will pull up your real-time stage: Order Placed, Dispatched, On The Way, Out for Delivery, or Reached."
+    ),
+
+    # 5. Human Representative Handoff
     (
         r"\b(talk to a person|human|representative|agent|manager|supervisor|operator|real person|speak to someone)\b",
         "I can certainly connect you with our on-duty customer service supervisor. Let me initiate a transfer to our senior dispatch manager. Please hold on for just a moment."
     ),
+
 
     # 5. Greetings & Small Talk
     (
@@ -127,10 +157,25 @@ def answer_universal_question(query_text: str, catalog_match: dict = None) -> st
         return f"We offer {title} across {location}. {desc} Our certified technicians are {avail}. Do you have any other questions or doubts?"
 
 
+    # 1.5. Dynamic Order ID Live Tracking Lookup (e.g. ORD-101, ORD-102)
+    ord_match = re.search(r"\b(ord-\d+)\b", clean, re.IGNORECASE)
+    if ord_match:
+        target_ord = ord_match.group(1).upper()
+        try:
+            import csv
+            if os.path.exists("orders_tracking_dataset.csv"):
+                with open("orders_tracking_dataset.csv", mode="r", encoding="utf-8") as f:
+                    for row in csv.DictReader(f):
+                        if row.get("Order_ID", "").upper() == target_ord:
+                            return f"Order {target_ord} for {row.get('Customer_Name')} ({row.get('Product_Service')}): Current Status is {row.get('Tracking_Status')} [{row.get('Status_Stage')}]. Assigned Specialist: {row.get('Assigned_Technician')}. ETA: {row.get('Estimated_Arrival')}. Notes: {row.get('Tracking_Notes')}"
+        except Exception:
+            pass
+
     # 2. Match against Universal Knowledge Base
     for pattern, answer in KNOWLEDGE_PATTERNS:
         if re.search(pattern, clean, re.IGNORECASE):
             return answer
+
 
     # 3. Dynamic Intelligent Fallback for Open-Domain Questions
     # Extracts keywords and provides contextual home service guidance

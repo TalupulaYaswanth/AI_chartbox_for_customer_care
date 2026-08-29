@@ -1,56 +1,86 @@
 {
   "all_words": [
+    "200",
     "a",
     "ac",
+    "address",
     "afternoon",
     "agent",
     "air",
     "all",
     "am",
+    "amp",
     "an",
     "and",
     "anyon",
+    "apart",
+    "appoint",
+    "area",
+    "arriv",
+    "at",
     "bathroom",
+    "be",
+    "been",
     "blow",
+    "book",
     "box",
     "breaker",
     "burst",
     "bye",
     "can",
     "charger",
+    "check",
     "circuit",
     "clean",
     "clog",
+    "complet",
     "condit",
     "condition",
     "configur",
+    "confirm",
+    "connect",
+    "constantli",
+    "control",
     "coolant",
     "cost",
+    "crew",
     "custom",
     "deep",
-    "done",
+    "deliv",
+    "deliveri",
+    "destin",
+    "did",
+    "dispatch",
+    "door",
     "doubt",
     "drain",
+    "driver",
+    "eco",
     "ecobe",
     "electr",
     "electrician",
     "els",
     "emerg",
     "ev",
+    "everyth",
+    "far",
     "fix",
-    "flat",
-    "floor",
+    "for",
+    "friendli",
     "from",
     "full",
+    "fuse",
+    "go",
     "good",
     "goodby",
     "greet",
+    "ha",
     "have",
+    "heat",
     "hello",
     "hey",
     "hi",
     "home",
-    "honeywel",
     "hous",
     "how",
     "human",
@@ -58,65 +88,108 @@
     "i",
     "in",
     "instal",
-    "iot",
     "is",
+    "it",
+    "item",
+    "job",
+    "just",
     "kitchen",
     "leak",
-    "maid",
+    "left",
+    "locat",
     "main",
     "mainten",
     "manag",
+    "master",
+    "me",
     "morn",
+    "move",
     "much",
     "my",
     "need",
     "nest",
     "no",
-    "nope",
     "noth",
+    "now",
+    "on",
+    "order",
+    "out",
+    "packag",
     "panel",
     "person",
     "pipe",
+    "place",
+    "placement",
     "pleas",
     "plumb",
     "plumber",
-    "rate",
+    "product",
+    "reach",
     "real",
     "repair",
+    "replac",
     "repres",
+    "residenti",
+    "rout",
     "s",
+    "sanit",
+    "schedul",
     "servic",
     "setup",
     "smart",
-    "solar",
     "speak",
+    "statu",
+    "success",
     "supervisor",
     "talk",
+    "technician",
     "thank",
     "that",
     "the",
     "there",
     "thermostat",
+    "they",
+    "through",
     "to",
+    "today",
+    "toward",
     "transfer",
+    "transit",
+    "travel",
     "trip",
     "upgrad",
     "urgent",
+    "van",
+    "vehicl",
     "wall",
+    "want",
+    "warehous",
     "warm",
     "water",
-    "window",
+    "way",
+    "when",
+    "where",
+    "who",
+    "wifi",
+    "will",
+    "wire",
     "with",
+    "yet",
     "you"
   ],
   "tags": [
     "ac_repair",
+    "dispatched",
     "electrical_panel",
     "exit",
     "greeting",
     "house_cleaning",
     "human_representative",
+    "on_the_way",
+    "order_placed",
+    "out_for_delivery",
     "plumbing",
+    "reached",
     "smart_thermostat"
   ],
   "intents": {
@@ -135,8 +208,88 @@
         ],
         "responses": [
           "Hello! Welcome to Apex Home Services. How can I help you today?",
-          "Hi there! What service or maintenance job can I assist you with?",
-          "Greetings! How can I help with your home service needs?"
+          "Hi there! What service, order, or maintenance job can I assist you with?",
+          "Greetings! How can I help with your customer care needs?"
+        ]
+      },
+      {
+        "tag": "order_placed",
+        "patterns": [
+          "I placed an order",
+          "Order placed successfully",
+          "Did my order go through",
+          "Confirm my order placement",
+          "Check order placed status",
+          "I just ordered a service",
+          "Where is my booking confirmation",
+          "Order has been placed"
+        ],
+        "responses": [
+          "Your order has been placed and confirmed in our system! Our fulfillment team is preparing your dispatch schedule.",
+          "Order Placed status confirmed! You will receive live dispatch and tracking updates as your technician prepares to head out."
+        ]
+      },
+      {
+        "tag": "dispatched",
+        "patterns": [
+          "Has my order been dispatched",
+          "Technician dispatched status",
+          "Is my product dispatched",
+          "When will it be dispatched",
+          "Dispatch confirmation",
+          "Item dispatched from warehouse",
+          "Who is dispatched for my job"
+        ],
+        "responses": [
+          "Your order is Dispatched! The assigned service technician and equipment have officially departed our regional center.",
+          "Dispatch status: Active! Your technician has been assigned and dispatched with all necessary replacement parts."
+        ]
+      },
+      {
+        "tag": "on_the_way",
+        "patterns": [
+          "Is the technician on the way",
+          "Is my order on the way",
+          "Package in transit",
+          "Driver on the way to my address",
+          "Is technician traveling now",
+          "How far is the technician",
+          "Moving towards my location"
+        ],
+        "responses": [
+          "Your technician is On The Way! Live GPS tracking indicates they are currently en route to your service address.",
+          "Status: On The Way! Estimated travel time is approximately 15 to 25 minutes depending on local traffic."
+        ]
+      },
+      {
+        "tag": "out_for_delivery",
+        "patterns": [
+          "Is my order out for delivery",
+          "Out for delivery status",
+          "Arriving today",
+          "Is the delivery vehicle in my area",
+          "Scheduled for delivery today",
+          "Delivery van on route"
+        ],
+        "responses": [
+          "Your order is Out for Delivery! Our mobile service unit is in your immediate neighborhood and will arrive during your designated window.",
+          "Status: Out for Delivery today! Please ensure someone is available at the premises to grant service access."
+        ]
+      },
+      {
+        "tag": "reached",
+        "patterns": [
+          "Has the technician reached",
+          "Technician arrived at my door",
+          "Order delivered and reached",
+          "Package reached destination",
+          "Did they arrive yet",
+          "Delivery completed and reached",
+          "Driver has reached"
+        ],
+        "responses": [
+          "Status: Reached! The technician or delivery unit has arrived at your destination address.",
+          "Your technician has reached your location and is ready to begin service! Please check your entrance."
         ]
       },
       {
@@ -179,79 +332,79 @@
           "Install smart thermostat",
           "Nest thermostat setup",
           "Ecobee configuration",
-          "Honeywell thermostat",
-          "IoT smart home thermostat",
-          "Thermostat installation cost"
+          "Smart home heating controls",
+          "Thermostat wiring",
+          "Connect thermostat to wifi",
+          "How much to install Nest"
         ],
         "responses": [
           "We install and configure Nest, Ecobee, and Honeywell Smart Thermostats with scheduling for a $150 fixed rate.",
-          "Our Smart Thermostat & IoT Setup is $150 flat rate including app integration and scheduling."
+          "Our smart home specialists handle full thermostat wiring, mobile app sync, and automation for $150."
         ]
       },
       {
         "tag": "house_cleaning",
         "patterns": [
-          "Full house deep cleaning",
-          "Need house cleaning service",
-          "Clean my kitchen and bathrooms",
-          "Window and floor cleaning",
-          "Home deep clean flat rate",
-          "Maid cleaning services"
+          "Full house cleaning",
+          "Deep clean my apartment",
+          "House cleaning service",
+          "Sanitize kitchen and bathrooms",
+          "Eco friendly cleaning crew",
+          "How much is house cleaning",
+          "Residential cleaning appointment"
         ],
         "responses": [
-          "Our Full House Deep Cleaning service covers kitchens, bathrooms, floors, and windows for a $120 flat rate.",
-          "We provide complete top-to-bottom home deep cleaning at $120."
+          "We provide complete top-to-bottom home deep cleaning at $120. Our crew handles kitchens, bathrooms, floors, and windows.",
+          "Our deep cleaning package is $120 for full residential sanitization using eco-friendly products."
         ]
       },
       {
         "tag": "electrical_panel",
         "patterns": [
-          "Main panel electrical upgrade",
-          "Upgrade breaker box",
-          "Circuit breaker tripping",
-          "EV charger electrical install",
-          "Solar electrical panel setup",
-          "Electrician needed"
+          "Upgrade electrical panel",
+          "Main circuit breaker replacement",
+          "Electric panel upgrade cost",
+          "Fuse box tripping constantly",
+          "Install 200 amp panel",
+          "EV charger electrical upgrade",
+          "Master electrician needed"
         ],
         "responses": [
-          "Main Panel Electrical Upgrades are $1,200 to support high power loads, EV chargers, and solar setups.",
-          "Our licensed electricians perform 200-amp main panel upgrades for $1,200."
+          "Our licensed electricians perform 200-amp main panel upgrades for $1,200, fully permitted with a 10-year warranty.",
+          "We replace outdated fuse boxes with modern 200A breaker panels for $1,200, perfect for solar and EV chargers."
         ]
       },
       {
         "tag": "human_representative",
         "patterns": [
-          "Speak to a human",
-          "Transfer to an agent",
+          "I want to speak with a human",
+          "Transfer me to a representative",
+          "Can I speak with a manager",
+          "Connect me to an agent",
           "Talk to a real person",
           "Customer service supervisor",
-          "Human representative please",
-          "Can I speak with a manager"
+          "Human representative please"
         ],
         "responses": [
-          "Certainly, let me forward your call to a human representative right away.",
-          "Transferring your call to our on-duty customer service supervisor immediately."
+          "Transferring your call to our on-duty customer service supervisor immediately.",
+          "Connecting you to a live human representative right away. Please hold."
         ]
       },
       {
         "tag": "exit",
         "patterns": [
-          "No",
           "No thanks",
-          "No thank you",
+          "No, that's all",
           "Nothing else",
-          "Nope",
-          "Bye",
           "Goodbye",
-          "No doubts",
-          "I have no doubts",
-          "That's all",
+          "Bye",
           "I am good",
-          "All done"
+          "No doubts left",
+          "That is everything thank you"
         ],
         "responses": [
-          "Thank you for contacting Apex Home Services. Have a wonderful day! Goodbye.",
-          "Thanks for calling! Feel free to reach back out if you need anything else. Goodbye!"
+          "Thanks for calling! Feel free to reach back out if you need anything else. Goodbye!",
+          "Thank you for contacting Apex Home Services. Have a great day! Goodbye."
         ]
       }
     ]

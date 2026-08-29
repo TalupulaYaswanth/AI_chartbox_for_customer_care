@@ -1,0 +1,11 @@
+Order_ID,Customer_Name,Product_Service,Tracking_Status,Status_Stage,Assigned_Technician,Estimated_Arrival,Location,Tracking_Notes
+ORD-101,Alex Johnson,Air Conditioner Deep Clean,Order Placed,Stage 1: Confirmed,Marcus Vance,Today 2:00 PM,Downtown Zone,"Order received and verified. Technician assignment confirmed."
+ORD-102,Maria Garcia,Emergency Pipe Leak Repair,Dispatched,Stage 2: Dispatched,Sarah Jenkins,Today 1:15 PM,Metro West,"Technician has departed the regional depot with repair equipment."
+ORD-103,David Smith,Smart Thermostat & IoT Setup,On The Way,Stage 3: In Transit,Dave Miller,Today 1:45 PM,Northside & East,"Technician is en route in mobile service van. ETA 15 mins."
+ORD-104,Sarah Lee,Full House Deep Cleaning,Out for Delivery,Stage 4: Out for Service,Cleaning Crew Alpha,Today 12:30 PM,All Zones,"Crew is in customer neighborhood preparing equipment."
+ORD-105,Robert Brown,Main Panel Electrical Upgrade,Reached,Stage 5: Arrived / Completed,Tom Harris,Arrived (12:00 PM),Downtown Zone,"Technician has reached customer doorstep and commenced panel upgrade."
+ORD-106,Emily Davis,Reheater & Appliance Diagnostic,Order Placed,Stage 1: Confirmed,Marcus Vance,Tomorrow 10:00 AM,West Zone,"Order placed. Pre-dispatch inspection scheduled for tomorrow morning."
+ORD-107,James Wilson,Clogged Drain Hydro-Jetting,Dispatched,Stage 2: Dispatched,Sarah Jenkins,Today 3:30 PM,Metro South,"Vehicle dispatched with high-pressure drain hydro-jetter."
+ORD-108,Jessica Taylor,Nest Thermostat C-Wire Adapter,On The Way,Stage 3: In Transit,Dave Miller,Today 2:15 PM,East District,"Driver navigating through central avenue towards customer premises."
+ORD-109,Michael Clark,Living Room & Carpet Steam Clean,Out for Delivery,Stage 4: Out for Service,Cleaning Crew Beta,Today 1:00 PM,North Zone,"Mobile cleaning van is out for delivery in the immediate vicinity."
+ORD-110,Daniel Martinez,EV Home Charger Circuit 240V,Reached,Stage 5: Arrived / Completed,Tom Harris,Arrived (11:45 AM),Central Zone,"Electrician reached site and verified power panel connection."
