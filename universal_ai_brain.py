@@ -5,10 +5,21 @@ import random
 
 
 # ==============================================================================
+# GRAVITY A2 RAG GROUNDING & ANTI-HALLUCINATION VOICE PROMPT
+# ==============================================================================
+GRAVITY_A2_SYSTEM_PROMPT = """You are the Apex AI Voice Customer Care Assistant.
+1. Strictly analyze only what the human user stated in their speech input. Never invent or assume unmentioned facts.
+2. Ground all answers strictly in the verified Knowledge Base and service catalog.
+3. If an answer or service record is not in your verified database, NEVER copy-paste random filler or make up details. Politely say:
+   'I do not have verified records regarding that in my knowledge base right now, but I would be very happy to connect you with our specialist.'
+4. Always speak with warm, polite, and concise conversational tone suitable for voice speech."""
+
+# ==============================================================================
 # UNIVERSAL HOME SERVICE & GENERAL KNOWLEDGE INTELLIGENCE ENGINE
 # Capable of answering any general question, company policy, technical advice,
 # troubleshooting steps, pricing, and conversational dialogue.
 # ==============================================================================
+
 
 KNOWLEDGE_PATTERNS = [
     # 1. Company Information & Location
@@ -177,18 +188,21 @@ def answer_universal_question(query_text: str, catalog_match: dict = None) -> st
             return answer
 
 
-    # 3. Dynamic Intelligent Fallback for Open-Domain Questions
-    # Extracts keywords and provides contextual home service guidance
-    keywords = [w for w in clean.split() if len(w) > 3 and w not in ["what", "when", "where", "which", "could", "would", "should", "have", "with", "from", "this", "that", "your", "help"]]
-    
-    if "book" in clean or "schedule" in clean or "appointment" in clean:
-        return "You can schedule any appointment directly with us. We have licensed technicians available today for HVAC, plumbing, electrical, and deep cleaning. Which service and time works best for you?"
-    
-    if "emergency" in clean or "urgent" in clean or "now" in clean:
-        return "For immediate emergency assistance (such as burst pipes, electrical sparks, or AC breakdown), our 24/7 rapid dispatch unit is ready. What emergency are you currently experiencing?"
+    # 3. Gravity A2 RAG Grounding & Polite Fallback Protocol
+    # Never hallucinate, invent false data, or copy-paste unrelated content.
+    keywords = [w for w in clean.split() if len(w) > 3 and w not in ["what", "when", "where", "which", "could", "would", "should", "have", "with", "from", "this", "that", "your", "help", "about", "there"]]
 
+    if "book" in clean or "schedule" in clean or "appointment" in clean:
+        return "I would be delighted to help you schedule an appointment. We have licensed technicians available today for HVAC, plumbing, electrical, and deep cleaning. Which service and time works best for you?"
+
+    if "emergency" in clean or "urgent" in clean or "now" in clean:
+        return "For immediate emergency assistance (such as burst pipes, electrical hazards, or AC breakdowns), our 24/7 rapid dispatch unit is on standby. What specific emergency are you experiencing right now?"
+
+    # If the user asks about an unknown topic not in the verified records, politely decline with RAG honesty:
     if keywords:
         topic_str = " ".join(keywords[:3])
-        return f"Regarding your inquiry about '{topic_str}', Apex Home Services provides full-service diagnostics, repairs, and installations with licensed technicians. Would you like a quote or technician availability for this?"
+        return f"I do not have verified records regarding '{topic_str}' in my knowledge base at the moment, but I would be very happy to connect you with our customer care specialist to assist you further. Is there anything else I can help you with today?"
 
-    return "I am here to help with all your home service needs, including AC Repair ($85), 24/7 Plumbing ($95/hr), Smart Thermostats ($150), Deep Cleaning ($120), and Electrical Panel Upgrades ($1,200). What question or service can I assist you with?"
+    # Courteous default overview
+    return "I am here to assist you with any questions regarding Apex Home Services, including AC Repair ($85), 24/7 Emergency Plumbing ($95/hr), Smart Thermostat Setup ($150), Deep Cleaning ($120), and Order Tracking. How may I best assist you today?"
+
