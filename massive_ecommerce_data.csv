@@ -1,16 +1,21 @@
-Index,Clothing ID,Age,Title,Review Text,Rating,Recommended IND,Positive Feedback Count,Division Name,Department Name
-0,767,33,Absolutely wonderful!,"Love this product! The quality is amazing, fits true to size, and the fabric is very breathable.",5,1,0,Initmates,Intimate
-1,1080,34,Great lightweight piece,"Loved this dress! It's so pretty and flattering. The color is rich and exactly as pictured.",5,1,4,General,Dresses
-2,1077,60,Some major design flaws,"I had high hopes for this, but the zipper got stuck immediately and the stitching around the collar is unraveled.",2,0,0,General,Dresses
-3,1049,50,My favorite purchase this year,"I love, love, love this jumpsuit. I am 5'5 and 130 pounds, and size small fit like a glove.",5,1,0,General Petite,Pants
-4,847,47,Flattering and versatile,"Super cute shirt! Wore it to work with slacks and got countless compliments. Highly recommend.",5,1,6,General,Tops
-5,1080,49,Not true to size,"Material is fine but the sizing runs extremely small. I usually wear a medium but this felt like an XS.",2,0,4,General,Dresses
-6,858,39,Very comfortable everyday wear,"Soft material, comfortable cut, and washes well without shrinking. Will buy in more colors.",5,1,1,General Petite,Tops
-7,862,39,Shoddy construction,"The seam ripped after one delicate cycle wash. Very disappointed given the price point.",1,0,2,General,Tops
-8,1077,24,Flirty and fun dress,"Wore this to a summer wedding and loved the silhouette. Comfortable to dance in all night long.",5,1,0,General,Dresses
-9,1077,53,Such a beautiful classic piece,"High quality craftsmanship, rich colors, and very comfortable lining. Fits perfectly.",5,1,0,General,Dresses
-10,1077,41,Awkward fit,"The waistline is positioned too high and creates an awkward silhouette. Had to return it.",2,0,3,General,Dresses
-11,1095,39,Cozy and chic sweater,"Perfect winter knit! Warm without being overly bulky and looks great with jeans or skirts.",5,1,2,General Petite,Sweaters
-12,1095,44,Way too itchy,"I wanted to love this cardigan but the wool blend is so scratchy I couldn't keep it on for 5 minutes.",1,0,5,General,Sweaters
-13,767,36,Soft and supportive,"Best lounge bralette I have ever owned. Gentle support and zero pinching.",5,1,0,Initmates,Intimate
-14,847,29,Chic office staple,"Crisp button down that does not wrinkle easily throughout the workday. 10/10 recommend.",5,1,1,General,Tops
+Index,Clothing ID,Age,Title,Review Text,Rating,Recommended IND,Positive Feedback Count,Division Name,Department Name,Split
+0,1077,41,Awkward fit,"The waistline is positioned too high and creates an awkward silhouette. Had to return it.",2,0,3,General,Dresses,train
+1,847,47,Flattering and versatile,"Super cute shirt! Wore it to work with slacks and got countless compliments. Highly recommend.",5,1,6,General,Tops,train
+2,1095,44,Way too itchy,"I wanted to love this cardigan but the wool blend is so scratchy I couldn't keep it on for 5 minutes.",1,0,5,General,Sweaters,train
+3,767,33,Absolutely wonderful!,"Love this product! The quality is amazing, fits true to size, and the fabric is very breathable.",5,1,0,Initmates,Intimate,train
+4,1080,49,Not true to size,"Material is fine but the sizing runs extremely small. I usually wear a medium but this felt like an XS.",2,0,4,General,Dresses,validation
+5,1049,50,My favorite purchase this year,"I love, love, love this jumpsuit. I am 5'5 and 130 pounds, and size small fit like a glove.",5,1,0,General Petite,Pants,train
+6,862,39,Shoddy construction,"The seam ripped after one delicate cycle wash. Very disappointed given the price point.",1,0,2,General,Tops,test
+7,1080,34,Great lightweight piece,"Loved this dress! It's so pretty and flattering. The color is rich and exactly as pictured.",5,1,4,General,Dresses,train
+8,858,39,Very comfortable everyday wear,"Soft material, comfortable cut, and washes well without shrinking. Will buy in more colors.",5,1,1,General Petite,Tops,train
+9,1077,24,Flirty and fun dress,"Wore this to a summer wedding and loved the silhouette. Comfortable to dance in all night long.",5,1,0,General,Dresses,train
+10,767,36,Soft and supportive,"Best lounge bralette I have ever owned. Gentle support and zero pinching.",5,1,0,Initmates,Intimate,validation
+11,1077,60,Some major design flaws,"I had high hopes for this, but the zipper got stuck immediately and the stitching around the collar is unraveled.",2,0,0,General,Dresses,test
+12,1095,39,Cozy and chic sweater,"Perfect winter knit! Warm without being overly bulky and looks great with jeans or skirts.",5,1,2,General Petite,Sweaters,train
+13,847,29,Chic office staple,"Crisp button down that does not wrinkle easily throughout the workday. 10/10 recommend.",5,1,1,General,Tops,train
+14,1077,53,Such a beautiful classic piece,"High quality craftsmanship, rich colors, and very comfortable lining. Fits perfectly.",5,1,0,General,Dresses,train
+15,920,31,Modern tailored jacket,"Structured blazer that elevates any casual outfit. Great shoulder padding and sleeve length.",5,1,3,General,Jackets,train
+16,920,45,Poor lining material,"The polyester lining tore within a week. Outer fabric is nice but inner construction is cheap.",2,0,1,General,Jackets,test
+17,1102,28,Must-have summer skirt,"Flowy, lightweight, and comes with deep pockets! Will definitely order in another print.",5,1,7,General Petite,Skirts,train
+18,1102,52,Too long for petite,"Way too long for a petite cut. Dragged on the ground even with 3-inch heels.",2,0,0,General Petite,Skirts,validation
+19,631,35,Silky soft pajamas,"Breathable modal fabric that keeps you cool all night. Elastic waistband is comfortable.",5,1,2,Initmates,Intimate,train
