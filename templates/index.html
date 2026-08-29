@@ -54,7 +54,12 @@
                     <i class="fa-solid fa-comments"></i>
                     <span>Stored Conversations</span>
                 </button>
+                <button class="nav-item" data-tab="security-pipeline-tab">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Secure Pipeline & Threats</span>
+                </button>
             </nav>
+
 
 
 
@@ -379,8 +384,166 @@
                     </div>
                 </div>
             </section>
+
+            <!-- TAB 6: SECURE PIPELINE ARCHITECTURE & THREAT SIMULATOR -->
+            <section class="tab-content" id="security-pipeline-tab">
+                <div class="glass-card" style="margin-bottom: 24px;">
+                    <div class="card-header flex-between">
+                        <div>
+                            <h3 style="display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-shield-halved" style="color:var(--accent);"></i>
+                                Secure Pipeline Architecture & Sequence Flow
+                            </h3>
+                            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">
+                                Multi-layered defense in depth: Network, Authentication Gateway, WAF, Rate Limiting, and Input Sanitization.
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">Pipeline Risk Score</span>
+                            <div id="risk-score-badge" style="font-size: 1.4rem; font-weight: 700; color: #10b981; text-shadow: 0 0 12px rgba(16,185,129,0.4);">
+                                Low
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Sequence Diagram (Client -> WAF/Edge -> Auth Gateway -> Backend Server) -->
+                    <div class="sequence-diagram-container" style="background: rgba(11, 15, 26, 0.95); border: 1px solid var(--border-glass); border-radius: 12px; padding: 24px; margin: 16px 0; overflow-x: auto;">
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; margin-bottom: 24px; min-width: 600px;">
+                            <div class="actor-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px;">
+                                <i class="fa-solid fa-user" style="font-size: 1.8rem; color: var(--text-main); margin-bottom: 6px;"></i>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Client</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">Web / Voice UI</div>
+                            </div>
+                            <div class="actor-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px;">
+                                <i class="fa-solid fa-cloud-shield" style="font-size: 1.8rem; color: var(--primary); margin-bottom: 6px;"></i>
+                                <div style="font-weight: 600; font-size: 0.9rem;">WAF / Edge</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">TLS 1.3 & Rate Limit</div>
+                            </div>
+                            <div class="actor-card" style="background: rgba(255,255,200,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px;">
+                                <i class="fa-solid fa-key" style="font-size: 1.8rem; color: #f59e0b; margin-bottom: 6px;"></i>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Auth Gateway</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">IP Binding & 2FA</div>
+                            </div>
+                            <div class="actor-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 12px;">
+                                <i class="fa-solid fa-server" style="font-size: 1.8rem; color: var(--accent); margin-bottom: 6px;"></i>
+                                <div style="font-weight: 600; font-size: 0.9rem;">Backend Server</div>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">Flask / SQLite Core</div>
+                            </div>
+                        </div>
+
+                        <!-- Traced Steps List -->
+                        <div class="steps-flow-grid" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; font-family: 'Space Mono', monospace; min-width: 600px;">
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid var(--primary);">
+                                <span><strong style="color:var(--primary);">1.</strong> Send Request (Encrypted Payload HTTPS / TLS 1.3)</span>
+                                <span style="color:var(--text-muted); font-size: 0.75rem;">Client &rarr; WAF/Edge</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid var(--primary);">
+                                <span><strong style="color:var(--primary);">2.</strong> Inspect & Pass Request (HSTS & Anti-Downgrade)</span>
+                                <span style="color:var(--text-muted); font-size: 0.75rem;">WAF Inspection</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid var(--primary);">
+                                <span><strong style="color:var(--primary);">3.</strong> Check Rate Limit (&le; 5 req/min per IP)</span>
+                                <span style="color:#10b981; font-size: 0.75rem;"><i class="fa-solid fa-check"></i> Passed</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid #f59e0b;">
+                                <span><strong style="color:#f59e0b;">4.</strong> Forward Payload to Auth Gateway</span>
+                                <span style="color:var(--text-muted); font-size: 0.75rem;">WAF &rarr; Auth Gateway</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid #f59e0b;">
+                                <span><strong style="color:#f59e0b;">5.</strong> Request MFA Token / Verification</span>
+                                <span style="color:var(--text-muted); font-size: 0.75rem;">Auth Gateway &rarr; Client</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid #f59e0b;">
+                                <span><strong style="color:#f59e0b;">6.</strong> Provide 2FA Code (6-Digit Security PIN)</span>
+                                <span style="color:var(--text-muted); font-size: 0.75rem;">Client &rarr; Auth Gateway</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid #f59e0b;">
+                                <span><strong style="color:#f59e0b;">7.</strong> MFA Verification Required & IP Binding Validated</span>
+                                <span style="color:#10b981; font-size: 0.75rem;"><i class="fa-solid fa-lock"></i> Verified</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid var(--accent);">
+                                <span><strong style="color:var(--accent);">8.</strong> Hand-off Request to Protected Core</span>
+                                <span style="color:var(--text-muted); font-size: 0.75rem;">Auth Gateway &rarr; Backend</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid var(--accent);">
+                                <span><strong style="color:var(--accent);">9.</strong> Sanitize & Validate Input (Anti-SQLi / Anti-XSS)</span>
+                                <span style="color:#10b981; font-size: 0.75rem;"><i class="fa-solid fa-check-double"></i> Clean</span>
+                            </div>
+                            <div class="step-row" style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid #10b981;">
+                                <span><strong style="color:#10b981;">10.</strong> 200 OK (Secure Response Encrypted Payload)</span>
+                                <span style="color:#10b981; font-size: 0.75rem;">Backend &rarr; Client</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Control Toggles Matrix -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 24px;">
+                        <div class="toggle-control-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.95rem;">TLS / HTTPS</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Enforce TLS 1.3 & HSTS</div>
+                            </div>
+                            <input type="checkbox" id="toggle-tls" checked class="security-toggle" style="transform: scale(1.4); cursor: pointer;">
+                        </div>
+                        <div class="toggle-control-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.95rem;">WAF (Web Firewall)</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Inspect packets & headers</div>
+                            </div>
+                            <input type="checkbox" id="toggle-waf" checked class="security-toggle" style="transform: scale(1.4); cursor: pointer;">
+                        </div>
+                        <div class="toggle-control-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.95rem;">MFA / 2FA</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">6-Digit Security Challenge</div>
+                            </div>
+                            <input type="checkbox" id="toggle-mfa" checked class="security-toggle" style="transform: scale(1.4); cursor: pointer;">
+                        </div>
+                        <div class="toggle-control-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.95rem;">Rate Limiting</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">&le; 5 failed attempts/min</div>
+                            </div>
+                            <input type="checkbox" id="toggle-ratelimit" checked class="security-toggle" style="transform: scale(1.4); cursor: pointer;">
+                        </div>
+                        <div class="toggle-control-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <div style="font-weight:600; font-size:0.95rem;">Input Validation</div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);">Anti-SQLi & Anti-XSS</div>
+                            </div>
+                            <input type="checkbox" id="toggle-validation" checked class="security-toggle" style="transform: scale(1.4); cursor: pointer;">
+                        </div>
+                    </div>
+
+                    <!-- Live Attack Simulator & Console -->
+                    <div style="margin-top: 24px; border-top: 1px solid var(--border-glass); padding-top: 20px;">
+                        <h4 style="margin-bottom: 12px; display:flex; align-items:center; gap:8px;">
+                            <i class="fa-solid fa-terminal" style="color:var(--accent);"></i>
+                            Live Threat Defense Simulator
+                        </h4>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+                            <button type="button" class="btn secondary-btn" id="btn-test-bruteforce">
+                                <i class="fa-solid fa-bolt" style="color:#ef4444;"></i> Simulate Brute Force Attack
+                            </button>
+                            <button type="button" class="btn secondary-btn" id="btn-test-sqli">
+                                <i class="fa-solid fa-syringe" style="color:#f59e0b;"></i> Simulate SQL Injection
+                            </button>
+                            <button type="button" class="btn secondary-btn" id="btn-test-ip-spoof">
+                                <i class="fa-solid fa-user-secret" style="color:#a855f7;"></i> Simulate IP Session Hijack
+                            </button>
+                            <button type="button" class="btn secondary-btn" id="btn-test-2fa">
+                                <i class="fa-solid fa-key" style="color:#10b981;"></i> Simulate 2FA Verification
+                            </button>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: 8px; padding: 14px; font-family: 'Space Mono', monospace; font-size: 0.8rem; height: 160px; overflow-y: auto;" id="threat-telemetry-logs">
+                            <div style="color: var(--text-muted);">[SYSTEM READY] Secure pipeline active. Monitoring incoming traffic on port 5000...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
+
 
     <!-- Modal for Adding New Book -->
     <div class="modal-backdrop" id="add-modal">

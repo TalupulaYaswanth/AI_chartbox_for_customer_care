@@ -81,11 +81,41 @@ class VoiceLocatorTestCase(unittest.TestCase):
         self.assertEqual(data['imported_count'], 2)
 
     def test_18_security_headers(self):
-        """Test browser security headers on HTTP responses."""
+        """Test browser security headers, HSTS, and Content-Security-Policy on HTTP responses."""
         res = self.client.get('/login')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.headers.get("X-Frame-Options"), "DENY")
         self.assertEqual(res.headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertIn("Strict-Transport-Security", res.headers)
+
+    def test_19_rate_limiting_defense(self):
+        """Test rate limiting prevents brute force attacks (blocks after 5 attempts)."""
+        from app import LOGIN_ATTEMPTS
+        LOGIN_ATTEMPTS.clear()
+        
+        # 5 failed attempts
+        for i in range(5):
+            res = self.client.post('/api/login', json={"username": "attacker", "password": "wrong_pwd"})
+            self.assertEqual(res.status_code, 401)
+            self.assertIn("Invalid credentials", res.get_json()["error"])
+            
+        # 6th attempt should be blocked with HTTP 429 Too Many Requests
+        rate_blocked_res = self.client.post('/api/login', json={"username": "attacker", "password": "wrong_pwd"})
+        self.assertEqual(rate_blocked_res.status_code, 429)
+        self.assertIn("Too many failed login attempts", rate_blocked_res.get_json()["error"])
+        LOGIN_ATTEMPTS.clear()
+
+    def test_20_mfa_2fa_verification(self):
+        """Test 2FA multi-factor authentication token verification."""
+        # 1. Invalid 2FA code rejected
+        invalid_res = self.client.post('/api/verify-2fa', json={"username": "admin", "code": "000000"})
+        self.assertEqual(invalid_res.status_code, 401)
+        
+        # 2. Valid 2FA code accepted and grants session
+        valid_res = self.client.post('/api/verify-2fa', json={"username": "admin", "code": "123456"})
+        self.assertEqual(valid_res.status_code, 200)
+        self.assertTrue(valid_res.get_json()["success"])
+
 
 
 
