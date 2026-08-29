@@ -971,19 +971,72 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Sign out button handler
-    const logoutBtn = document.getElementById("logout-btn");
-    if (logoutBtn) {
-        logoutBtn.addEventListener("click", async () => {
-            localStorage.removeItem("owner_logged_in");
-            try {
-                await fetch("/api/logout", { method: "POST" });
-            } catch (err) {
-                console.error("Logout request failed", err);
+    // =========================================================================
+    // 7. STRICT AUTHENTICATION, IP VERIFICATION & 10-MINUTE IDLE TIMEOUT ENGINE
+    // =========================================================================
+    const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+    let idleTimer = null;
+    let boundIpAddress = null;
+
+    // A. Strict Page-Level Authentication & IP Verification Guard
+    async function verifyAuthAndIpBinding() {
+        try {
+            const res = await fetch("/api/check-auth");
+            if (res.status === 401 || !res.ok) {
+                const data = await res.json().catch(() => ({}));
+                triggerSecurityLockout(data.reason || "unauthenticated");
+                return false;
             }
-            window.location.href = "/login";
+            const data = await res.json();
+            if (!data.authenticated) {
+                triggerSecurityLockout(data.reason || "unauthenticated");
+                return false;
+            }
+
+            // Track bound IP
+            boundIpAddress = data.bound_ip;
+            return true;
+        } catch (err) {
+            console.error("[SECURITY] Auth check failed:", err);
+            triggerSecurityLockout("network_auth_error");
+            return false;
+        }
+    }
+
+    // B. Emergency Security Lockout Handler (Instantly Blank UI & Wipe Session)
+    function triggerSecurityLockout(reason = "unauthenticated") {
+        console.warn(`[SECURITY LOCKOUT] Triggered due to: ${reason}`);
+        // Immediately blank the UI to protect sensitive data
+        document.documentElement.style.display = "none";
+        document.body.innerHTML = "";
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // Terminate backend session and redirect
+        fetch("/api/logout", { method: "POST" }).finally(() => {
+            window.location.replace(`/login?reason=${encodeURIComponent(reason)}`);
         });
     }
+
+    // C. 10-Minute Inactivity / Idle Tracker
+    function resetIdleTimer() {
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            console.warn("[IDLE TIMEOUT] User inactive for 10 minutes. Forcing logout sequence.");
+            triggerSecurityLockout("idle_timeout");
+        }, IDLE_TIMEOUT_MS);
+    }
+
+    // Monitor all user interaction events
+    const activityEvents = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click", "pointerdown"];
+    activityEvents.forEach(evt => {
+        window.addEventListener(evt, resetIdleTimer, { passive: true });
+    });
+
+    // Start idle tracker and periodic IP/auth heartbeats
+    resetIdleTimer();
+    verifyAuthAndIpBinding();
+    setInterval(verifyAuthAndIpBinding, 30000); // Check every 30s in background
 
     // Delete customer action
     window.deleteCustomer = async (id) => {
@@ -997,6 +1050,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 });
+
 
 
 

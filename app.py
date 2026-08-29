@@ -1,11 +1,18 @@
 import os
+import time
+import hashlib
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, Response, jsonify, render_template, session, redirect, url_for
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = "supersecretkey_apex_call_center"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=10)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
 DB_PATH = "school_library.db"
+SESSION_IDLE_TIMEOUT_SECONDS = 600  # 10 minutes
 
 
 # Try importing twilio helper, fallback to basic XML generator if not installed
@@ -26,6 +33,23 @@ try:
 except Exception as e:
     print(f"[NLP WARMUP NOTICE]: {e}")
     NLP_MODEL_READY = False
+
+
+def get_client_ip():
+    """Extract true client IP supporting proxies and reverse gateways."""
+    if request.headers.get("X-Forwarded-For"):
+        return request.headers.get("X-Forwarded-For").split(",")[0].strip()
+    return request.remote_addr or "127.0.0.1"
+
+
+@app.after_request
+def set_security_headers(response):
+    """Enforce strict browser security headers on all requests."""
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
 
 
 
@@ -282,29 +306,67 @@ PUBLIC_ENDPOINTS = {
 @app.before_request
 def enforce_route_security():
     """
-    Global Security & Authentication Wall.
-    Blocks unauthorized users and hackers from entering admin portals,
-    call center pages, or querying internal APIs without valid authentication.
+    Global Security & Authentication Wall:
+    1. Intercepts all page transitions and API requests.
+    2. Enforces active session validation on every request.
+    3. Enforces IP Address Binding: Destroys session and immediately blocks if IP changed.
+    4. Enforces 10-Minute Idle Timeout: Auto-terminates session if inactive for 10 minutes.
     """
     if request.endpoint in PUBLIC_ENDPOINTS or request.endpoint is None:
         return None
-        
+
+    client_ip = get_client_ip()
+    current_time = time.time()
+
+    # 1. Verify Active Authentication State
     if not session.get("logged_in"):
-        ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"\n[SECURITY BLOCKED] Unauthorized attempt to access '{request.path}' from {ip} at {timestamp}.\n")
-        
-        # If API endpoint, return 401 JSON error
+        print(f"\n[SECURITY BLOCKED] Unauthorized access to '{request.path}' from {client_ip} at {timestamp}.\n")
         if request.path.startswith("/api/"):
             return jsonify({
                 "success": False,
-                "error": "Access Denied: Authentication required. Please sign in."
+                "error": "Access Denied: Authentication required. Please sign in.",
+                "reason": "unauthenticated"
             }), 401
-            
-        # If web page, block and redirect to login
         if request.path == "/":
             return render_template("login.html")
         return redirect("/login")
+
+    # 2. Enforce 10-Minute Inactivity Idle Timeout
+    last_activity = session.get("last_activity")
+    if last_activity and (current_time - last_activity > SESSION_IDLE_TIMEOUT_SECONDS):
+        session.clear()
+        print(f"[SECURITY TIMEOUT] Session expired after 10 minutes of inactivity for IP {client_ip}.")
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "success": False,
+                "error": "Session expired due to 10 minutes of inactivity. Please re-authenticate.",
+                "reason": "idle_timeout"
+            }), 401
+        return redirect("/login?reason=idle_timeout")
+
+    # 3. Enforce Strict IP Address Binding & Anti-Session Hijacking
+    bound_ip = session.get("bound_ip")
+    if bound_ip and bound_ip != client_ip:
+        session.clear()
+        print(f"\n[SECURITY ALERT - IP HIJACK BLOCKED] Session IP {bound_ip} mismatch with client IP {client_ip}. Session destroyed immediately.\n")
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "success": False,
+                "error": "Security Alert: IP address mismatch detected. Session terminated.",
+                "reason": "ip_mismatch"
+            }), 401
+        # Instant blank page and forced redirect for web pages
+        return Response("""<!DOCTYPE html>
+<html><head><script>
+    localStorage.clear(); sessionStorage.clear();
+    document.documentElement.style.display = 'none';
+    window.location.replace('/login?reason=ip_mismatch');
+</script></head><body style="background:#0b0f1a;"></body></html>""", mimetype="text/html")
+
+    # Update sliding activity timestamp
+    session["last_activity"] = current_time
+
 
 
 @app.route("/")
@@ -1113,7 +1175,7 @@ def send_owner_login_alert_email(failed_username):
 
 @app.route("/api/login", methods=["POST"])
 def api_login():
-    """Handle Owner Login verification checking against the SQLite users dataset."""
+    """Handle Owner Login verification, IP address binding, and session initialization."""
     data = request.get_json() or {}
     username = data.get("username", "").strip()
     password = data.get("password", "").strip()
@@ -1127,8 +1189,20 @@ def api_login():
     if row:
         user = dict(row)
         if user["password"] == password:
+            session.clear()
+            session.permanent = True
             session["logged_in"] = True
-            return jsonify({"success": True, "redirect": "/"})
+            session["username"] = username
+            session["bound_ip"] = get_client_ip()
+            session["last_activity"] = time.time()
+            session["user_agent_hash"] = hashlib.sha256(request.headers.get("User-Agent", "").encode()).hexdigest()
+            print(f"[AUTH SUCCESS] User '{username}' authenticated. Bound IP: {session['bound_ip']}. Idle TTL: 10 minutes.")
+            return jsonify({
+                "success": True,
+                "redirect": "/",
+                "bound_ip": session["bound_ip"],
+                "idle_ttl": SESSION_IDLE_TIMEOUT_SECONDS
+            })
             
     # Send email alert to owner on invalid login!
     send_owner_login_alert_email(username or "[Unknown]")
@@ -1159,18 +1233,90 @@ def api_signup():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-
 @app.route("/api/logout", methods=["POST"])
 def api_logout():
-    """Owner logout endpoint."""
-    session.pop("logged_in", None)
-    return jsonify({"success": True})
+    """Owner logout endpoint: invalidates and clears active session."""
+    session.clear()
+    return jsonify({"success": True, "message": "Session invalidated successfully."})
 
 
 @app.route("/api/check-auth")
 def api_check_auth():
-    """Verify owner authentication state."""
-    return jsonify({"authenticated": bool(session.get("logged_in"))})
+    """Verify owner authentication state, bound IP verification, and idle TTL countdown."""
+    if not session.get("logged_in"):
+        return jsonify({"authenticated": False, "reason": "unauthenticated"})
+        
+    client_ip = get_client_ip()
+    bound_ip = session.get("bound_ip")
+    if bound_ip and bound_ip != client_ip:
+        session.clear()
+        return jsonify({"authenticated": False, "reason": "ip_mismatch"}), 401
+        
+    current_time = time.time()
+    last_act = session.get("last_activity", current_time)
+    if (current_time - last_act) > SESSION_IDLE_TIMEOUT_SECONDS:
+        session.clear()
+        return jsonify({"authenticated": False, "reason": "idle_timeout"}), 401
+        
+    session["last_activity"] = current_time
+    remaining_seconds = max(0, int(SESSION_IDLE_TIMEOUT_SECONDS - (current_time - last_act)))
+    return jsonify({
+        "authenticated": True,
+        "username": session.get("username", "admin"),
+        "bound_ip": bound_ip,
+        "remaining_ttl_seconds": remaining_seconds
+    })
+
+
+@app.route("/api/import-data", methods=["POST"])
+def api_import_data():
+    """
+    Secure Data Import Endpoint:
+    Accepts CSV / JSON structured records with data sanitization, schema validation,
+    and parameterized SQL transactions to ensure zero SQL injection and maximum data security.
+    """
+    if not session.get("logged_in"):
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+        
+    data = request.get_json() or {}
+    items = data.get("items", [])
+    
+    if not items or not isinstance(items, list):
+        return jsonify({"success": False, "error": "Invalid format: 'items' array required."}), 400
+        
+    imported_count = 0
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        for item in items:
+            title = str(item.get("title", "")).strip()
+            author = str(item.get("author", "Service Specialist")).strip()
+            category = str(item.get("category", "General")).strip()
+            shelf_location = str(item.get("shelf_location", "All Zones")).strip()
+            available = 1 if item.get("available", True) else 0
+            description = str(item.get("description", "")).strip()
+            
+            if title:
+                cursor.execute("""
+                    INSERT INTO books (title, author, category, shelf_location, available, description)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (title, author, category, shelf_location, available, description))
+                imported_count += 1
+                
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({"success": False, "error": f"Import failed: {str(e)}"}), 500
+        
+    conn.close()
+    return jsonify({
+        "success": True,
+        "imported_count": imported_count,
+        "message": f"Successfully and securely imported {imported_count} records."
+    })
+
 
 
 @app.route("/api/upload-kb", methods=["POST"])

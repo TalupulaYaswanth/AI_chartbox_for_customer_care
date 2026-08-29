@@ -290,11 +290,55 @@
     </div>
 
     <script>
-        // Redirect to login if owner is not signed in
-        if (localStorage.getItem("owner_logged_in") !== "true") {
-            alert("Owner Portal is locked. Redirecting to starting Sign In page...");
-            window.location.href = "http://localhost:5000/login";
+        // =====================================================================
+        // STRICT AUTHENTICATION, IP BINDING GUARD & 10-MINUTE IDLE TRACKER
+        // =====================================================================
+        const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+        let idleTimer = null;
+
+        function triggerSecurityLockout(reason = "unauthenticated") {
+            document.documentElement.style.display = "none";
+            document.body.innerHTML = "";
+            localStorage.clear();
+            sessionStorage.clear();
+            fetch("/api/logout", { method: "POST" }).finally(() => {
+                window.location.replace(`/login?reason=${encodeURIComponent(reason)}`);
+            });
         }
+
+        async function verifySessionSecurity() {
+            try {
+                const res = await fetch("/api/check-auth");
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    triggerSecurityLockout(data.reason || "unauthenticated");
+                    return;
+                }
+                const data = await res.json();
+                if (!data.authenticated) {
+                    triggerSecurityLockout(data.reason || "unauthenticated");
+                }
+            } catch (err) {
+                console.error("Security verification failed:", err);
+                triggerSecurityLockout("auth_error");
+            }
+        }
+
+        function resetInactivityTimer() {
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                triggerSecurityLockout("idle_timeout");
+            }, IDLE_TIMEOUT_MS);
+        }
+
+        ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click", "pointerdown"].forEach(evt => {
+            window.addEventListener(evt, resetInactivityTimer, { passive: true });
+        });
+
+        resetInactivityTimer();
+        verifySessionSecurity();
+        setInterval(verifySessionSecurity, 30000); // 30s heartbeat
+
 
         const callForm = document.getElementById("call-form");
         const consoleLogs = document.getElementById("console-logs");

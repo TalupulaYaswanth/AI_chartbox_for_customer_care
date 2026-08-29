@@ -8,10 +8,86 @@ class VoiceLocatorTestCase(unittest.TestCase):
         self.client = app.test_client()
         init_db()
 
-    def login(self):
-        """Helper to establish an authenticated owner session."""
+    def login(self, ip="127.0.0.1"):
+        """Helper to establish an authenticated owner session bound to an IP."""
+        import time
         with self.client.session_transaction() as sess:
             sess['logged_in'] = True
+            sess['username'] = 'admin'
+            sess['bound_ip'] = ip
+            sess['last_activity'] = time.time()
+
+    def test_15_ip_binding_and_hijack_prevention(self):
+        """Test strict IP address binding and automatic anti-hijack session destruction."""
+        # 1. Login with legitimate IP 192.168.1.100
+        self.login(ip="192.168.1.100")
+        
+        # Request from legitimate IP succeeds
+        res = self.client.get('/api/check-auth', environ_base={'REMOTE_ADDR': '192.168.1.100'})
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(res.get_json()['authenticated'])
+        
+        # 2. Attacker attempts to use session from a different IP 203.0.113.50
+        hijack_res = self.client.get('/api/check-auth', environ_base={'REMOTE_ADDR': '203.0.113.50'})
+        self.assertEqual(hijack_res.status_code, 401)
+        self.assertEqual(hijack_res.get_json()['reason'], 'ip_mismatch')
+        
+        # Verify session was destroyed
+        subsequent_res = self.client.get('/api/check-auth', environ_base={'REMOTE_ADDR': '192.168.1.100'})
+        self.assertEqual(subsequent_res.status_code, 200)
+        self.assertFalse(subsequent_res.get_json()['authenticated'])
+
+    def test_16_idle_timeout_expiration(self):
+        """Test 10-minute (600s) sliding inactivity idle timeout."""
+        import time
+        # Establish session with last activity 601 seconds in the past
+        with self.client.session_transaction() as sess:
+            sess['logged_in'] = True
+            sess['bound_ip'] = '127.0.0.1'
+            sess['last_activity'] = time.time() - 601  # Inactive > 10 mins
+
+        # Request should be rejected due to idle timeout
+        res = self.client.get('/api/check-auth')
+        self.assertEqual(res.status_code, 401)
+        self.assertEqual(res.get_json()['reason'], 'idle_timeout')
+
+    def test_17_secure_data_import_api(self):
+        """Test secure data import endpoint with validation and parameterized transactions."""
+        self.login()
+        test_import_payload = {
+            "items": [
+                {
+                    "title": "Smart Irrigation Controller",
+                    "author": "IoT Tech",
+                    "category": "Smart Home",
+                    "shelf_location": "Zone C",
+                    "available": True,
+                    "description": "Automated lawn and garden irrigation controller."
+                },
+                {
+                    "title": "Tankless Water Heater Installation",
+                    "author": "Plumbing Pro",
+                    "category": "Plumbing",
+                    "shelf_location": "All Zones",
+                    "available": True,
+                    "description": "Energy efficient continuous hot water installation."
+                }
+            ]
+        }
+        res = self.client.post('/api/import-data', json=test_import_payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['imported_count'], 2)
+
+    def test_18_security_headers(self):
+        """Test browser security headers on HTTP responses."""
+        res = self.client.get('/login')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.headers.get("X-Frame-Options"), "DENY")
+        self.assertEqual(res.headers.get("X-Content-Type-Options"), "nosniff")
+
+
 
     def test_01_index_page(self):
         """Test homepage loads HTML correctly based on authentication."""

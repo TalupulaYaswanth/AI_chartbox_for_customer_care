@@ -242,6 +242,20 @@
 
         let activeMode = "signin"; // "signin" or "signup"
 
+        // Check for security redirect reasons (idle timeout, IP mismatch)
+        const urlParams = new URLSearchParams(window.location.search);
+        const reason = urlParams.get("reason");
+        if (reason === "idle_timeout") {
+            alertBox.className = "alert-box danger";
+            alertText.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> Session expired after 10 minutes of inactivity. Please sign in again.';
+            alertBox.style.display = "flex";
+        } else if (reason === "ip_mismatch") {
+            alertBox.className = "alert-box danger";
+            alertText.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Security Alert: IP address change detected. Active session was terminated for your security.';
+            alertBox.style.display = "flex";
+        }
+
+
         tabSignin.addEventListener("click", () => {
             activeMode = "signin";
             tabSignin.classList.add("active");
