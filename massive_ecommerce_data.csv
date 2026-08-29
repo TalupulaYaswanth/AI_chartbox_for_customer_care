@@ -1,16 +1,16 @@
-text,category,label
-"Air conditioner repair and coolant leak fix with filter cleaning",HVAC & Cooling,0
-"Emergency pipe leak repair in bathroom wall with 24/7 plumber",Plumbing,1
-"Smart home Nest and Ecobee thermostat installation with WiFi setup",Smart Home IoT,2
-"Full house deep cleaning service for 3 bedroom apartment",Deep Cleaning,3
-"Main electrical panel upgrade and 200 amp circuit breaker replacement",Electrical,4
-"AC blowing warm air and compressor motor making loud buzzing noise",HVAC & Cooling,0
-"Burst water pipe flooding kitchen floor urgent plumber needed",Plumbing,1
-"Honeywell programmable smart thermostat installation and wiring",Smart Home IoT,2
-"Top to bottom deep cleaning including kitchen appliances and windows",Deep Cleaning,3
-"Electric vehicle EV home charger circuit installation on main panel",Electrical,4
-"HVAC seasonal maintenance and duct cleaning inspection",HVAC & Cooling,0
-"Clogged kitchen drain and garbage disposal repair service",Plumbing,1
-"Smart lighting and digital thermostat app configuration",Smart Home IoT,2
-"Move-in move-out deep cleaning for residential houses",Deep Cleaning,3
-"Circuit breaker tripping constantly when microwave and AC run",Electrical,4
+Index,Clothing ID,Age,Title,Review Text,Rating,Recommended IND,Positive Feedback Count,Division Name,Department Name
+0,767,33,Absolutely wonderful!,"Love this product! The quality is amazing, fits true to size, and the fabric is very breathable.",5,1,0,Initmates,Intimate
+1,1080,34,Great lightweight piece,"Loved this dress! It's so pretty and flattering. The color is rich and exactly as pictured.",5,1,4,General,Dresses
+2,1077,60,Some major design flaws,"I had high hopes for this, but the zipper got stuck immediately and the stitching around the collar is unraveled.",2,0,0,General,Dresses
+3,1049,50,My favorite purchase this year,"I love, love, love this jumpsuit. I am 5'5 and 130 pounds, and size small fit like a glove.",5,1,0,General Petite,Pants
+4,847,47,Flattering and versatile,"Super cute shirt! Wore it to work with slacks and got countless compliments. Highly recommend.",5,1,6,General,Tops
+5,1080,49,Not true to size,"Material is fine but the sizing runs extremely small. I usually wear a medium but this felt like an XS.",2,0,4,General,Dresses
+6,858,39,Very comfortable everyday wear,"Soft material, comfortable cut, and washes well without shrinking. Will buy in more colors.",5,1,1,General Petite,Tops
+7,862,39,Shoddy construction,"The seam ripped after one delicate cycle wash. Very disappointed given the price point.",1,0,2,General,Tops
+8,1077,24,Flirty and fun dress,"Wore this to a summer wedding and loved the silhouette. Comfortable to dance in all night long.",5,1,0,General,Dresses
+9,1077,53,Such a beautiful classic piece,"High quality craftsmanship, rich colors, and very comfortable lining. Fits perfectly.",5,1,0,General,Dresses
+10,1077,41,Awkward fit,"The waistline is positioned too high and creates an awkward silhouette. Had to return it.",2,0,3,General,Dresses
+11,1095,39,Cozy and chic sweater,"Perfect winter knit! Warm without being overly bulky and looks great with jeans or skirts.",5,1,2,General Petite,Sweaters
+12,1095,44,Way too itchy,"I wanted to love this cardigan but the wool blend is so scratchy I couldn't keep it on for 5 minutes.",1,0,5,General,Sweaters
+13,767,36,Soft and supportive,"Best lounge bralette I have ever owned. Gentle support and zero pinching.",5,1,0,Initmates,Intimate
+14,847,29,Chic office staple,"Crisp button down that does not wrinkle easily throughout the workday. 10/10 recommend.",5,1,1,General,Tops

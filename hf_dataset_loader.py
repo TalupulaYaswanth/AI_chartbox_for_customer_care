@@ -23,19 +23,26 @@ def main():
 
         # 2. Tokenize function
         print("[2/3] Initializing batch tokenizer...")
+        
+        # Determine text column name
+        sample_cols = dataset.column_names
+        text_col = "Review Text" if "Review Text" in sample_cols else ("text" if "text" in sample_cols else sample_cols[0])
+        print(f" -> Auto-detected text feature column: '{text_col}'")
+
         try:
             from transformers import AutoTokenizer
             tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
             print(" -> Using Hugging Face pre-trained AutoTokenizer.")
             def tokenize_fn(batch):
-                return tokenizer(batch["text"], padding="max_length", truncation=True, max_length=64)
+                texts = [str(t or "") for t in batch[text_col]]
+                return tokenizer(texts, padding="max_length", truncation=True, max_length=64)
         except Exception:
             print(" -> Using optimized built-in vectorizer.")
             def tokenize_fn(batch):
                 input_ids = []
                 attention_mask = []
-                for text in batch["text"]:
-                    words = text.lower().split()[:64]
+                for t in batch[text_col]:
+                    words = str(t or "").lower().split()[:64]
                     ids = [abs(hash(w)) % 30522 for w in words] + [0] * (64 - len(words))
                     mask = [1] * len(words) + [0] * (64 - len(words))
                     input_ids.append(ids)
@@ -52,7 +59,7 @@ def main():
         return
 
     except Exception as e:
-        print(f"[FALLBACK ENGINE] Processing dataset via streaming memory-mapped reader...")
+        print(f"[FALLBACK ENGINE] Processing dataset via streaming memory-mapped reader ({e})...")
 
     # High-speed resilient reader
     with open(csv_path, mode="r", encoding="utf-8") as f:
@@ -67,13 +74,14 @@ def main():
     processed_count = 0
     tokenized_samples = []
     for r in records:
-        text = r.get("text", "")
+        text = r.get("Review Text") or r.get("text") or r.get("Title") or ""
         tokens = text.lower().split()[:64]
         input_ids = [abs(hash(t)) % 30522 for t in tokens] + [0] * (64 - len(tokens))
         mask = [1] * len(tokens) + [0] * (64 - len(tokens))
         tokenized_samples.append({
             "text": text,
-            "category": r.get("category", ""),
+            "department": r.get("Department Name", r.get("category", "")),
+            "rating": r.get("Rating", "5"),
             "input_ids": input_ids,
             "attention_mask": mask
         })
