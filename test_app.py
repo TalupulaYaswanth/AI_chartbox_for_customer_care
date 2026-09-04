@@ -278,6 +278,139 @@ class VoiceLocatorTestCase(unittest.TestCase):
         self.assertIn(res["tag"], ["plumbing", "ac_repair", "unknown"])
         self.assertGreater(res["confidence"], 0.0)
 
+    def test_21_zego_token04_generation(self):
+        """Test ZEGOCLOUD Token04 cryptographic generation and validation."""
+        from zego_manager import (
+            generate_token04,
+            ERROR_CODE_SUCCESS,
+            ERROR_CODE_APP_ID_INVALID,
+            ERROR_CODE_USER_ID_INVALID,
+            ERROR_CODE_SECRET_INVALID,
+            ERROR_CODE_EFFECTIVE_TIME_IN_SECONDS_INVALID
+        )
+        secret_32 = "0123456789abcdef0123456789abcdef"
+        
+        # 1. Valid Token generation
+        token_info = generate_token04(123456789, "user_alice", secret_32, 3600, '{"room_id":"room_1"}')
+        self.assertEqual(token_info.error_code, ERROR_CODE_SUCCESS)
+        self.assertTrue(token_info.token.startswith("04"))
+        self.assertGreater(len(token_info.token), 50)
+        
+        # 2. Invalid AppID
+        err1 = generate_token04(0, "user_alice", secret_32, 3600)
+        self.assertEqual(err1.error_code, ERROR_CODE_APP_ID_INVALID)
+        
+        # 3. Invalid UserID
+        err2 = generate_token04(123456789, "", secret_32, 3600)
+        self.assertEqual(err2.error_code, ERROR_CODE_USER_ID_INVALID)
+        
+        # 4. Invalid Secret (not 32 bytes)
+        err3 = generate_token04(123456789, "user_alice", "short_secret", 3600)
+        self.assertEqual(err3.error_code, ERROR_CODE_SECRET_INVALID)
+        
+        # 5. Invalid Expiry
+        err4 = generate_token04(123456789, "user_alice", secret_32, -10)
+        self.assertEqual(err4.error_code, ERROR_CODE_EFFECTIVE_TIME_IN_SECONDS_INVALID)
+
+    def test_22_zego_config_and_token_api(self):
+        """Test ZEGOCLOUD public config and Token04 issuance API endpoints."""
+        # 1. Config endpoint
+        res = self.client.get('/api/zego/config')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertIn('app_id', data)
+        self.assertIn('server_url', data)
+        self.assertNotIn('server_secret', data)  # Verify server secret is NOT leaked
+        
+        # 2. Token generation endpoint
+        token_res = self.client.post('/api/zego/token', json={
+            "user_id": "test_caller_99",
+            "room_id": "room_test_101",
+            "effective_time": 1800
+        })
+        self.assertEqual(token_res.status_code, 200)
+        t_data = token_res.get_json()
+        self.assertTrue(t_data['success'])
+        self.assertTrue(t_data['token'].startswith("04"))
+        self.assertEqual(t_data['user_id'], "test_caller_99")
+
+    def test_23_zego_call_lifecycle_and_multiturn(self):
+        """Test end-to-end ZEGOCLOUD Call Initiation, Multi-turn Context Memory, Barge-in, and Teardown."""
+        # 1. Initiate Call
+        init_res = self.client.post('/api/zego/call/initiate', json={
+            "customer_name": "Sarah Connor",
+            "customer_phone": "+15554321098"
+        })
+        self.assertEqual(init_res.status_code, 200)
+        init_data = init_res.get_json()
+        self.assertTrue(init_data['success'])
+        room_id = init_data['room_id']
+        self.assertIn('initial_greeting', init_data)
+        self.assertTrue(init_data['customer']['token'].startswith("04"))
+        
+        # 2. Multi-turn Turn 1: Inquire about Air Conditioner
+        chat1 = self.client.post('/api/zego/call/chat', json={
+            "room_id": room_id,
+            "transcript": "Do you offer air conditioner deep clean?"
+        })
+        self.assertEqual(chat1.status_code, 200)
+        c1_data = chat1.get_json()
+        self.assertTrue(c1_data['success'])
+        self.assertIn("85", c1_data['spoken_response'])
+        
+        # 3. Multi-turn Turn 2: Contextual follow-up ("How much was that again?")
+        chat2 = self.client.post('/api/zego/call/chat', json={
+            "room_id": room_id,
+            "transcript": "How much was that service again?"
+        })
+        self.assertEqual(chat2.status_code, 200)
+        c2_data = chat2.get_json()
+        self.assertTrue(c2_data['success'])
+        self.assertIn("$85", c2_data['spoken_response'])  # Contextually recalled AC price!
+        
+        # 4. Caller Interruption / Barge-in trigger
+        barge_res = self.client.post('/api/zego/call/barge-in', json={"room_id": room_id})
+        self.assertEqual(barge_res.status_code, 200)
+        self.assertTrue(barge_res.get_json()['interrupted'])
+        self.assertGreaterEqual(barge_res.get_json()['barge_in_count'], 1)
+        
+        # 5. Conclude Call
+        end_res = self.client.post('/api/zego/call/end', json={"room_id": room_id})
+        self.assertEqual(end_res.status_code, 200)
+        end_data = end_res.get_json()
+        self.assertTrue(end_data['success'])
+        self.assertIn("CALL ENDED", end_data['full_transcript'] or "Call Finished")
+
+    def test_24_zego_anti_hallucination_grounding(self):
+        """Test Gravity A2 Anti-Hallucination & Polite Fallback during ZEGOCLOUD Call."""
+        init_res = self.client.post('/api/zego/call/initiate', json={
+            "customer_name": "John Doe",
+            "customer_phone": "+15559998877"
+        })
+        room_id = init_res.get_json()['room_id']
+        
+        # Ask about non-existent service
+        unknown_chat = self.client.post('/api/zego/call/chat', json={
+            "room_id": room_id,
+            "transcript": "Do you repair interstellar spacecraft warp drives?"
+        })
+        self.assertEqual(unknown_chat.status_code, 200)
+        resp_text = unknown_chat.get_json()['spoken_response']
+        # Must decline politely per Gravity A2 RAG Grounding protocol
+        self.assertTrue(
+            "verified records" in resp_text or "specialist" in resp_text,
+            f"Expected polite RAG decline, got: {resp_text}"
+        )
+        
+        # Conclude with polite exit intent
+        exit_chat = self.client.post('/api/zego/call/chat', json={
+            "room_id": room_id,
+            "transcript": "No thanks, that's all, goodbye!"
+        })
+        self.assertEqual(exit_chat.status_code, 200)
+        self.assertTrue(exit_chat.get_json()['call_ended'])
+
 if __name__ == '__main__':
     unittest.main()
 

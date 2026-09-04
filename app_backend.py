@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from twilio.rest import Client
 import httpx
 import websockets
+from zego_manager import generate_token04, generate_room_token, zego_session_manager, ERROR_CODE_SUCCESS
 
 # Load environment variables
 load_dotenv()
@@ -328,3 +329,221 @@ async def websocket_endpoint(websocket: WebSocket):
         if deepgram_ws:
             await deepgram_ws.close()
         dg_task.cancel()
+
+
+# ==============================================================================
+# ZEGOCLOUD RTC VOICE CALL & REAL-TIME CONVERSATIONAL AI ENDPOINTS (FASTAPI)
+# ==============================================================================
+
+@app.get("/api/zego/config")
+async def api_fastapi_zego_config():
+    """Returns public ZEGOCLOUD client settings for WebRTC SDK."""
+    app_id_val = os.environ.get("ZEGO_APP_ID", "123456789")
+    try:
+        app_id = int(app_id_val)
+    except (ValueError, TypeError):
+        app_id = 123456789
+
+    app_sign = os.environ.get("ZEGO_APP_SIGN", "")
+    server_url = f"wss://webliveroom{app_id}-api.zegocloud.com/ws"
+    has_credentials = bool(os.environ.get("ZEGO_APP_ID") and os.environ.get("ZEGO_SERVER_SECRET"))
+
+    return {
+        "success": True,
+        "app_id": app_id,
+        "app_sign": app_sign,
+        "server_url": server_url,
+        "configured": has_credentials,
+        "default_room_prefix": "apex_rtc_room_"
+    }
+
+
+@app.post("/api/zego/token")
+async def api_fastapi_zego_token(request: Request):
+    """Generate Token04 for client WebRTC login."""
+    data = await request.json()
+    user_id = data.get("user_id", "").strip()
+    room_id = data.get("room_id", "").strip() or None
+    effective_time = int(data.get("effective_time", 3600))
+
+    if not user_id:
+        return JSONResponse({"success": False, "error": "user_id is required."}, 400)
+
+    token_info = generate_room_token(user_id, room_id, effective_time)
+    if token_info.error_code != ERROR_CODE_SUCCESS:
+        return JSONResponse({
+            "success": False,
+            "error": token_info.error_message,
+            "error_code": token_info.error_code
+        }, 500)
+
+    app_id_val = int(os.environ.get("ZEGO_APP_ID", 123456789))
+    return {
+        "success": True,
+        "token": token_info.token,
+        "app_id": app_id_val,
+        "user_id": user_id,
+        "room_id": room_id,
+        "effective_time": effective_time
+    }
+
+
+@app.post("/api/zego/call/initiate")
+async def api_fastapi_zego_call_initiate(request: Request):
+    """Initiate a new ZEGOCLOUD Voice Call session."""
+    data = await request.json()
+    customer_name = data.get("customer_name", "Valued Customer").strip()
+    customer_phone = data.get("customer_phone", "+15551234567").strip()
+    room_id = data.get("room_id", "").strip()
+
+    if not room_id:
+        import random
+        room_id = f"apex_rtc_{int(datetime.now().timestamp())}_{random.randint(100, 999)}"
+
+    session_obj = zego_session_manager.create_or_get_session(room_id, customer_name, customer_phone)
+    session_obj.mark_connected()
+
+    cust_user_id = f"user_{int(datetime.now().timestamp())}"
+    ai_user_id = f"ai_agent_{int(datetime.now().timestamp())}"
+
+    cust_token_info = generate_room_token(cust_user_id, room_id)
+    ai_token_info = generate_room_token(ai_user_id, room_id)
+
+    app_id_val = int(os.environ.get("ZEGO_APP_ID", 123456789))
+    greeting = f"Hello {customer_name}! Welcome to Apex Home Services. I am your automated AI care specialist. How can I assist you with your home services today?"
+    session_obj.add_turn("ai", greeting)
+
+    return {
+        "success": True,
+        "room_id": room_id,
+        "call_id": session_obj.call_id,
+        "app_id": app_id_val,
+        "customer": {
+            "user_id": cust_user_id,
+            "token": cust_token_info.token,
+            "stream_id": f"stream_{cust_user_id}"
+        },
+        "ai_agent": {
+            "user_id": ai_user_id,
+            "token": ai_token_info.token,
+            "stream_id": f"stream_{ai_user_id}"
+        },
+        "initial_greeting": greeting,
+        "session": session_obj.to_dict()
+    }
+
+
+@app.post("/api/zego/call/chat")
+async def api_fastapi_zego_call_chat(request: Request):
+    """Conversational AI turn processing for ZEGOCLOUD voice call."""
+    data = await request.json()
+    room_id = data.get("room_id", "").strip()
+    user_id = data.get("user_id", "caller").strip()
+    transcript = data.get("transcript", "").strip()
+
+    if not room_id or not transcript:
+        return JSONResponse({"success": False, "error": "room_id and transcript are required."}, 400)
+
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        session_obj = zego_session_manager.create_or_get_session(room_id)
+
+    session_obj.add_turn("caller", transcript)
+
+    # Clean exit intent check
+    clean_t = transcript.lower().strip().rstrip(".,!?")
+    if clean_t in ["bye", "goodbye", "no thanks", "nothing else", "no", "that's all", "done"]:
+        farewell = "Thank you for calling Apex Home Services. Have a wonderful day! Goodbye."
+        session_obj.add_turn("ai", farewell)
+        session_obj.mark_ended()
+        return {
+            "success": True,
+            "spoken_response": farewell,
+            "call_ended": True,
+            "transfer_call": False,
+            "barge_in_id": session_obj.last_ai_turn_id,
+            "session": session_obj.to_dict()
+        }
+
+    try:
+        from universal_ai_brain import answer_universal_question
+        ai_response = answer_universal_question(transcript, None, session_obj.history)
+    except Exception:
+        ai_response = "We offer AC deep clean ($85), 24/7 emergency plumbing ($95/hr), smart thermostat setup ($150), and electrical panel upgrades ($1,200). How can I help?"
+
+    transfer_call = False
+    if any(h in clean_t for h in ["human", "representative", "agent", "supervisor", "person"]):
+        ai_response = "I will connect you with our on-duty supervisor immediately. Please hold while I forward your call. TRANSFER_CALL"
+        transfer_call = True
+
+    session_obj.add_turn("ai", ai_response)
+
+    return {
+        "success": True,
+        "spoken_response": ai_response,
+        "call_ended": False,
+        "transfer_call": transfer_call,
+        "barge_in_id": session_obj.last_ai_turn_id,
+        "session": session_obj.to_dict()
+    }
+
+
+@app.post("/api/zego/call/barge-in")
+async def api_fastapi_zego_call_barge_in(request: Request):
+    """Interruption signal when caller speaks over AI playback."""
+    data = await request.json()
+    room_id = data.get("room_id", "").strip()
+
+    if not room_id:
+        return JSONResponse({"success": False, "error": "room_id is required."}, 400)
+
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        return JSONResponse({"success": False, "error": "Session not found."}, 404)
+
+    barge_info = session_obj.trigger_barge_in()
+    return {
+        "success": True,
+        "interrupted": True,
+        "barge_in_count": session_obj.barge_in_count,
+        "last_ai_turn_id": barge_info.get("last_ai_turn_id")
+    }
+
+
+@app.post("/api/zego/call/end")
+async def api_fastapi_zego_call_end(request: Request):
+    """Conclude ZEGOCLOUD Call Session."""
+    data = await request.json()
+    room_id = data.get("room_id", "").strip()
+
+    if not room_id:
+        return JSONResponse({"success": False, "error": "room_id is required."}, 400)
+
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        return JSONResponse({"success": False, "error": "Session not found."}, 404)
+
+    session_obj.mark_ended()
+    session_obj.add_turn("system", "[CALL ENDED] Conversation concluded.")
+    return {
+        "success": True,
+        "room_id": room_id,
+        "call_id": session_obj.call_id,
+        "message": "Call successfully terminated.",
+        "duration_turns": len(session_obj.history),
+        "barge_in_count": session_obj.barge_in_count,
+        "full_transcript": session_obj.get_full_transcript()
+    }
+
+
+@app.get("/api/zego/call/session/{room_id}")
+async def api_fastapi_zego_call_session(room_id: str):
+    """Retrieve full session state for a room."""
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        return JSONResponse({"success": False, "error": "Session not found."}, 404)
+
+    return {
+        "success": True,
+        "session": session_obj.to_dict()
+    }

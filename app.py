@@ -1,9 +1,13 @@
 import os
+import re
+import json
 import time
+import random
 import hashlib
 import sqlite3
 from datetime import datetime, timedelta
 from flask import Flask, request, Response, jsonify, render_template, session, redirect, url_for
+from zego_manager import generate_token04, generate_room_token, zego_session_manager, ERROR_CODE_SUCCESS
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 app.secret_key = "supersecretkey_apex_call_center"
@@ -194,38 +198,59 @@ def init_db():
 
     conn.close()
 
+STOP_WORDS = {
+    "the", "is", "in", "it", "to", "for", "on", "at", "a", "an", "this", "that",
+    "these", "those", "me", "my", "you", "your", "we", "our", "he", "she", "they",
+    "can", "could", "would", "should", "do", "does", "did", "be", "been", "being",
+    "have", "has", "had", "with", "from", "by", "about", "as", "into", "like",
+    "through", "after", "over", "between", "out", "against", "during", "without",
+    "before", "under", "around", "among", "there", "here", "where", "when", "why",
+    "how", "what", "which", "who", "whom", "will", "shall", "and", "or", "but", "so",
+    "going", "some", "somewhere", "thing", "things", "project", "speech", "recording"
+}
+
 def search_database(query_text):
     """
-    Search service database using flexible keyword matching across title, category, author, and description.
+    High-Precision Service Database Search:
+    Filters conversational stop-words and prevents spurious partial keyword matches.
     """
     if not query_text or not query_text.strip():
         return []
     
     clean_query = query_text.strip()
-    words = [w for w in clean_query.split() if len(w) > 1]
+    # Extract only meaningful keywords (ignore stop-words and short non-abbreviation words)
+    raw_words = re.findall(r'\b[a-zA-Z0-9_-]+\b', clean_query.lower())
+    meaningful_words = [
+        w for w in raw_words 
+        if (len(w) >= 3 and w not in STOP_WORDS) or w in ["ac", "ev", "hvac", "24/7"]
+    ]
+    
+    if not meaningful_words:
+        return []
     
     conn = get_db()
     cursor = conn.cursor()
     
-    # 1. Exact or partial match on full title, category, author, or description
+    # 1. Exact phrase search
     cursor.execute("""
         SELECT * FROM books 
-        WHERE title LIKE ? OR category LIKE ? OR author LIKE ? OR description LIKE ?
+        WHERE title LIKE ? OR category LIKE ? OR author LIKE ?
         ORDER BY available DESC, title ASC
-    """, (f"%{clean_query}%", f"%{clean_query}%", f"%{clean_query}%", f"%{clean_query}%"))
+    """, (f"%{clean_query}%", f"%{clean_query}%", f"%{clean_query}%"))
     results = [dict(row) for row in cursor.fetchall()]
     
-    # 2. Fallback: Search individual keywords if no direct match found
-    if not results and words:
-        like_clauses = " OR ".join(["(title LIKE ? OR category LIKE ? OR description LIKE ?)" for _ in words])
+    # 2. Match only on filtered meaningful keywords
+    if not results and meaningful_words:
+        like_clauses = " OR ".join(["(title LIKE ? OR category LIKE ? OR description LIKE ?)" for _ in meaningful_words])
         params = []
-        for w in words:
+        for w in meaningful_words:
             params.extend([f"%{w}%", f"%{w}%", f"%{w}%"])
         cursor.execute(f"SELECT * FROM books WHERE {like_clauses} ORDER BY available DESC", params)
         results = [dict(row) for row in cursor.fetchall()]
         
     conn.close()
     return results
+
 
 
 def ai_triage_decision(query_text):
@@ -336,7 +361,15 @@ PUBLIC_ENDPOINTS = {
     "sms_webhook",
     "handle_speech",
     "outbound_greeting",
-    "static"
+    "static",
+    "api_zego_config",
+    "api_zego_token",
+    "api_zego_call_initiate",
+    "api_zego_call_chat",
+    "api_zego_call_barge_in",
+    "api_zego_call_end",
+    "api_zego_call_session",
+    "api_zego_call_list"
 }
 
 
@@ -1020,6 +1053,295 @@ def api_simulate_call():
         "best_match": best_match,
         "twiml_xml": xml_output,
         "spoken_text": say_text
+    })
+
+
+# ==========================================
+# 4.5. ZEGOCLOUD REAL-TIME RTC VOICE CALL & CONVERSATIONAL AI ENGINE
+# ==========================================
+@app.route("/api/zego/config", methods=["GET"])
+def api_zego_config():
+    """
+    Returns public ZEGOCLOUD WebRTC SDK configuration for client initialization.
+    Does NOT leak the server secret.
+    """
+    app_id_val = os.environ.get("ZEGO_APP_ID", "123456789")
+    try:
+        app_id = int(app_id_val)
+    except (ValueError, TypeError):
+        app_id = 123456789
+
+    app_sign = os.environ.get("ZEGO_APP_SIGN", "")
+    server_url = f"wss://webliveroom{app_id}-api.zegocloud.com/ws"
+    has_credentials = bool(os.environ.get("ZEGO_APP_ID") and os.environ.get("ZEGO_SERVER_SECRET"))
+
+    return jsonify({
+        "success": True,
+        "app_id": app_id,
+        "app_sign": app_sign,
+        "server_url": server_url,
+        "configured": has_credentials,
+        "default_room_prefix": "apex_rtc_room_"
+    })
+
+
+@app.route("/api/zego/token", methods=["POST"])
+def api_zego_token():
+    """
+    Generate official ZEGOCLOUD Token04 for client WebRTC room login and stream publishing.
+    """
+    data = request.get_json() or {}
+    user_id = data.get("user_id", "").strip()
+    room_id = data.get("room_id", "").strip() or None
+    effective_time = int(data.get("effective_time", 3600))
+
+    if not user_id:
+        return jsonify({"success": False, "error": "user_id is required."}), 400
+
+    token_info = generate_room_token(user_id, room_id, effective_time)
+    if token_info.error_code != ERROR_CODE_SUCCESS:
+        return jsonify({
+            "success": False,
+            "error": token_info.error_message,
+            "error_code": token_info.error_code
+        }), 500
+
+    app_id_val = int(os.environ.get("ZEGO_APP_ID", 123456789))
+    return jsonify({
+        "success": True,
+        "token": token_info.token,
+        "app_id": app_id_val,
+        "user_id": user_id,
+        "room_id": room_id,
+        "effective_time": effective_time
+    })
+
+
+@app.route("/api/zego/call/initiate", methods=["POST"])
+def api_zego_call_initiate():
+    """
+    Initiate a new ZEGOCLOUD Voice Call session.
+    Registers session in memory, generates tokens for customer and AI agent,
+    and returns initial conversational greeting.
+    """
+    touch_worker_cells([0, 1, 2, 4, 13])
+    data = request.get_json() or {}
+    customer_name = data.get("customer_name", "Valued Customer").strip()
+    customer_phone = data.get("customer_phone", "+15551234567").strip()
+    room_id = data.get("room_id", "").strip()
+    
+    if not room_id:
+        room_id = f"apex_rtc_{int(time.time())}_{random.randint(100, 999)}"
+
+    # Create or retrieve active call session
+    session_obj = zego_session_manager.create_or_get_session(room_id, customer_name, customer_phone)
+    session_obj.mark_connected()
+
+    # Generate customer & AI agent tokens
+    cust_user_id = f"user_{int(time.time())}"
+    ai_user_id = f"ai_agent_{int(time.time())}"
+
+    cust_token_info = generate_room_token(cust_user_id, room_id)
+    ai_token_info = generate_room_token(ai_user_id, room_id)
+
+    app_id_val = int(os.environ.get("ZEGO_APP_ID", 123456789))
+
+    # Initial friendly voice greeting
+    greeting = f"Hello {customer_name}! Welcome to Apex Home Services. I am your automated AI care specialist. How can I assist you with your home services today?"
+    session_obj.add_turn("ai", greeting)
+
+    # Log call initiation in SQLite
+    log_call("ZEGOCLOUD Voice Call", customer_phone, f"[CALL STARTED] {greeting}", None)
+
+    return jsonify({
+        "success": True,
+        "room_id": room_id,
+        "call_id": session_obj.call_id,
+        "app_id": app_id_val,
+        "customer": {
+            "user_id": cust_user_id,
+            "token": cust_token_info.token,
+            "stream_id": f"stream_{cust_user_id}"
+        },
+        "ai_agent": {
+            "user_id": ai_user_id,
+            "token": ai_token_info.token,
+            "stream_id": f"stream_{ai_user_id}"
+        },
+        "initial_greeting": greeting,
+        "session": session_obj.to_dict()
+    })
+
+
+@app.route("/api/zego/call/chat", methods=["POST"])
+def api_zego_call_chat():
+    """
+    Conversational AI Engine for ZEGOCLOUD Voice Call.
+    Processes transcribed caller audio, checks multi-turn conversation memory,
+    queries the verified catalog & knowledge patterns with Gravity A2 RAG grounding,
+    and returns voice synthesis response.
+    """
+    touch_worker_cells([0, 1, 2, 3, 8, 13, 16])
+    data = request.get_json() or {}
+    room_id = data.get("room_id", "").strip()
+    user_id = data.get("user_id", "caller").strip()
+    transcript = data.get("transcript", "").strip()
+
+    if not room_id or not transcript:
+        return jsonify({"success": False, "error": "room_id and transcript are required."}), 400
+
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        session_obj = zego_session_manager.create_or_get_session(room_id)
+
+    # Record caller's spoken input
+    session_obj.add_turn("caller", transcript)
+
+    # Check for exit intent (customer concludes call)
+    if is_exit_intent(transcript):
+        farewell = "Thank you for calling Apex Home Services. Have a wonderful day! Goodbye."
+        session_obj.add_turn("ai", farewell)
+        session_obj.mark_ended()
+        log_call("ZEGOCLOUD Voice Call", session_obj.customer_phone, transcript, None)
+        return jsonify({
+            "success": True,
+            "spoken_response": farewell,
+            "call_ended": True,
+            "transfer_call": False,
+            "barge_in_id": session_obj.last_ai_turn_id,
+            "session": session_obj.to_dict()
+        })
+
+    # Catalog search & AI Brain reasoning with multi-turn history
+    results = search_database(transcript)
+    best_match = results[0] if results else None
+
+    try:
+        from universal_ai_brain import answer_universal_question
+        ai_response = answer_universal_question(transcript, best_match, session_obj.history)
+    except Exception as e:
+        if best_match:
+            ai_response = f"We have {best_match['title']} available. It includes {best_match.get('description', '')}. Would you like to proceed?"
+        else:
+            ai_response = "I can assist you with AC repair, emergency plumbing, smart thermostat setup, or electrical panel upgrades. What service do you need?"
+
+    # Check for human handoff
+    transfer_call = False
+    clean_lower = transcript.lower()
+    if any(h in clean_lower for h in ["human", "representative", "agent", "supervisor", "person"]):
+        ai_response = "I will connect you with our on-duty supervisor immediately. Please hold while I forward your call. TRANSFER_CALL"
+        transfer_call = True
+
+    # Record AI turn in session history
+    session_obj.add_turn("ai", ai_response)
+
+    # Log turn to SQLite
+    log_call("ZEGOCLOUD Voice Call", session_obj.customer_phone, transcript, best_match)
+
+    return jsonify({
+        "success": True,
+        "spoken_response": ai_response,
+        "call_ended": False,
+        "transfer_call": transfer_call,
+        "barge_in_id": session_obj.last_ai_turn_id,
+        "session": session_obj.to_dict()
+    })
+
+
+@app.route("/api/zego/call/barge-in", methods=["POST"])
+def api_zego_call_barge_in():
+    """
+    Signals customer interruption (barge-in) during active AI voice playback.
+    Immediately halts AI speaking state and increments barge-in counter.
+    """
+    data = request.get_json() or {}
+    room_id = data.get("room_id", "").strip()
+
+    if not room_id:
+        return jsonify({"success": False, "error": "room_id is required."}), 400
+
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        return jsonify({"success": False, "error": "Session not found."}), 404
+
+    barge_info = session_obj.trigger_barge_in()
+    print(f"[ZEGOCLOUD BARGE-IN] Caller interrupted AI in room {room_id} (Count: {session_obj.barge_in_count})")
+    
+    return jsonify({
+        "success": True,
+        "interrupted": True,
+        "barge_in_count": session_obj.barge_in_count,
+        "last_ai_turn_id": barge_info.get("last_ai_turn_id")
+    })
+
+
+@app.route("/api/zego/call/end", methods=["POST"])
+def api_zego_call_end():
+    """
+    Gracefully ends a ZEGOCLOUD Voice Call session.
+    Marks session as ended, updates customer record in database,
+    and logs the complete conversation transcript.
+    """
+    data = request.get_json() or {}
+    room_id = data.get("room_id", "").strip()
+
+    if not room_id:
+        return jsonify({"success": False, "error": "room_id is required."}), 400
+
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        return jsonify({"success": False, "error": "Session not found."}), 404
+
+    session_obj.mark_ended()
+    session_obj.add_turn("system", "[CALL ENDED] Conversation concluded.")
+    full_transcript = session_obj.get_full_transcript()
+
+    # Update database customer record
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        status_text = f"ZEGOCLOUD Call Finished ({len(session_obj.history)} turns)"
+        cursor.execute("UPDATE customers SET last_call_status = ?, last_called_at = ? WHERE phone = ?", 
+                       (status_text, now_str, session_obj.customer_phone))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[ZEGO DB NOTICE]: {e}")
+
+    # Log complete call wrap-up
+    log_call("ZEGOCLOUD Voice Call", session_obj.customer_phone, f"[CALL ENDED] Total Turns: {len(session_obj.history)}", None)
+
+    return jsonify({
+        "success": True,
+        "room_id": room_id,
+        "call_id": session_obj.call_id,
+        "message": "Call successfully terminated.",
+        "duration_turns": len(session_obj.history),
+        "barge_in_count": session_obj.barge_in_count,
+        "full_transcript": full_transcript
+    })
+
+
+@app.route("/api/zego/call/session/<room_id>", methods=["GET"])
+def api_zego_call_session(room_id):
+    """Retrieve real-time state and full multi-turn history of a specific call room."""
+    session_obj = zego_session_manager.get_session(room_id)
+    if not session_obj:
+        return jsonify({"success": False, "error": "Session not found."}), 404
+
+    return jsonify({
+        "success": True,
+        "session": session_obj.to_dict()
+    })
+
+
+@app.route("/api/zego/call/list", methods=["GET"])
+def api_zego_call_list():
+    """Retrieve list of active ZEGOCLOUD voice call sessions."""
+    return jsonify({
+        "success": True,
+        "active_calls": zego_session_manager.list_active_sessions()
     })
 
 

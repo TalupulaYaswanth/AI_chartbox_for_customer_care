@@ -133,39 +133,85 @@ KNOWLEDGE_PATTERNS = [
 ]
 
 
-def answer_universal_question(query_text: str, catalog_match: dict = None) -> str:
+def answer_universal_question(query_text: str, catalog_match: dict = None, conversation_history: list = None) -> str:
     """
     Generate an intelligent, comprehensive, and helpful answer to any question.
-    Combines direct database catalog matching with open-domain reasoning.
+    Combines direct database catalog matching with multi-turn conversation memory
+    and strict Gravity A2 RAG grounding.
     """
     if not query_text or not query_text.strip():
         return "Hello! How can I assist you with your home services today?"
 
     clean = query_text.lower().strip()
 
-    # 1. If exact catalog match exists, weave rich catalog details
+    # Multi-turn context resolution: if user says "how much is that" or "what about the price"
+    # resolve pronouns from previous user/AI turns
+    if conversation_history and any(p in clean for p in ["how much was that", "what was that price", "what about that", "repeat that", "that service"]):
+        for prev in reversed(conversation_history):
+            prev_text = prev.get("text", "").lower()
+            if "air conditioner" in prev_text or "ac" in prev_text:
+                return "The Air Conditioner Deep Clean is $85 per unit, which includes full dismantle, filter washing, coil sanitization, and coolant level checks. Would you like to schedule an appointment?"
+            elif "plumbing" in prev_text or "pipe" in prev_text or "leak" in prev_text:
+                return "Our 24/7 Emergency Plumbing and Pipe Leak Repair is $95 per hour. Would you like our on-call plumber dispatched?"
+            elif "thermostat" in prev_text:
+                return "The Smart Thermostat installation is a fixed charge of $150. Would you like help booking this?"
+            elif "clean" in prev_text:
+                return "The Full House Deep Cleaning is a flat rate of $120. Would you like to book a cleaning team?"
+            elif "panel" in prev_text:
+                return "The Main Panel Electrical Upgrade is $1,200. We can arrange a master electrician for a consultation."
+
+    # 1. If catalog match exists, verify domain relevance to prevent false positives (e.g. generic 'repair')
+    if catalog_match:
+        title = catalog_match.get("title", "Home Service")
+        title_lower = title.lower()
+        
+        # Define required domain keywords for each service
+        domain_keywords = {
+            "pipe leak": ["pipe", "leak", "plumb", "water", "drain", "burst", "sink", "toilet", "faucet"],
+            "air conditioner": ["air", "conditioner", "ac", "hvac", "cool", "filter", "compressor"],
+            "smart thermostat": ["thermostat", "nest", "ecobee", "smart", "iot"],
+            "cleaning": ["clean", "house", "maid", "wash", "sanitiz"],
+            "panel electrical": ["panel", "electric", "breaker", "fuse", "box", "solar", "ev"],
+            "reheater": ["appliance", "dryer", "washer", "fridge", "refrigerator", "reheat"]
+        }
+        
+        # Check if the query contains at least one domain keyword for this matched service
+        is_relevant = False
+        matched_category = None
+        for cat, kw_list in domain_keywords.items():
+            if cat in title_lower:
+                matched_category = cat
+                if any(kw in clean for kw in kw_list):
+                    is_relevant = True
+                break
+        
+        # If the match was purely on generic words (e.g. 'repair' or 'pro') without domain keywords, discard match
+        if matched_category and not is_relevant:
+            catalog_match = None
+            
     if catalog_match:
         title = catalog_match.get("title", "Home Service")
         location = catalog_match.get("shelf_location", "All Zones")
         desc = catalog_match.get("description", "")
         avail = "available for booking today" if catalog_match.get("available") == 1 else "currently booked"
         
-        # Check if user asked specific question about price/location/details
+        price_map = {
+            "air conditioner": "$85 per unit",
+            "pipe leak": "$95/hour",
+            "smart thermostat": "$150 flat rate",
+            "cleaning": "$120 full house",
+            "panel": "$1,200 main upgrade"
+        }
+        matched_price = "our standard flat rate"
+        for k, v in price_map.items():
+            if k in title.lower():
+                matched_price = v
+                
+        # Check if user asked specific question about price/cost
         if any(w in clean for w in ["price", "cost", "how much", "rate"]):
-            price_map = {
-                "air conditioner": "$85 per unit",
-                "pipe leak": "$95/hour",
-                "smart thermostat": "$150 flat rate",
-                "cleaning": "$120 full house",
-                "panel": "$1,200 main upgrade"
-            }
-            matched_price = "our standard flat rate"
-            for k, v in price_map.items():
-                if k in title.lower():
-                    matched_price = v
             return f"{title} is priced at {matched_price}. It includes {desc}. Our technicians are {avail} in {location}. Do you have any other questions or doubts?"
 
-        return f"We offer {title} across {location}. {desc} Our certified technicians are {avail}. Do you have any other questions or doubts?"
+        return f"We offer {title} ({matched_price}) across {location}. {desc} Our certified technicians are {avail}. Do you have any other questions or doubts?"
 
 
     # 1.5. Dynamic Order ID Live Tracking Lookup (e.g. ORD-101, ORD-102)

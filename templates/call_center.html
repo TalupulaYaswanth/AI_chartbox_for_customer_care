@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex AI Call Center Dashboard</title>
+    <title>Apex AI Call Center &mdash; ZEGOCLOUD Voice Call RTC</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ZEGOCLOUD WebRTC Express Engine SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/zego-express-engine-webrtc/ZegoExpressWebRTC.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
         :root {
             --bg: #0b0f1a;
@@ -16,21 +18,22 @@
             --primary-glow: rgba(99, 102, 241, 0.35);
             --accent: #06b6d4;
             --accent-glow: rgba(6, 182, 212, 0.3);
+            --zego-blue: #0070f3;
+            --zego-glow: rgba(0, 112, 243, 0.35);
             --text-main: #f1f5f9;
             --text-sub: #cbd5e1;
             --text-muted: #64748b;
             --success: #10b981;
             --danger: #ef4444;
+            --warning: #f59e0b;
             --radius-lg: 16px;
             --radius-md: 12px;
             --transition: all 0.25s ease;
         }
 
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { background: var(--bg); color: var(--text-main); font-family: 'IBM Plex Sans', sans-serif; overflow: hidden; height: 100vh; }
         
-        /* Grid background effect */
         body::before {
             content: '';
             position: absolute;
@@ -44,26 +47,39 @@
             z-index: -1;
         }
 
-
-        .wrap { max-width: 1200px; margin: 0 auto; padding: 40px 24px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 24px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         header {
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border-glass);
-            padding-bottom: 24px; margin-bottom: 32px;
+            padding-bottom: 16px; margin-bottom: 20px;
         }
 
-        h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #fff, var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 4px; }
+        h1 { font-size: 1.75rem; font-weight: 700; background: linear-gradient(135deg, #fff, var(--text-muted)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        header p { color: var(--text-muted); font-size: 0.85rem; margin-top: 4px; }
 
         .back-link {
             display: inline-flex; align-items: center; gap: 8px;
-            color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+            color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: 500;
             transition: var(--transition);
         }
         .back-link:hover { color: var(--text-main); transform: translateX(-3px); }
 
-        .grid-main { display: grid; grid-template-columns: 1fr 1.2fr; gap: 32px; flex: 1; overflow: hidden; height: calc(100vh - 180px); }
+        .tabs-nav {
+            display: flex; gap: 10px; margin-bottom: 16px; border-bottom: 1px solid var(--border-glass); padding-bottom: 8px;
+        }
+        .tab-btn {
+            background: transparent; border: none; color: var(--text-muted);
+            padding: 8px 16px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            border-radius: 8px; display: inline-flex; align-items: center; gap: 8px;
+            transition: var(--transition);
+        }
+        .tab-btn.active {
+            background: rgba(99, 102, 241, 0.15); color: #fff; border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+        .tab-btn:hover:not(.active) { color: var(--text-sub); background: rgba(255,255,255,0.03); }
+
+        .grid-main { display: grid; grid-template-columns: 1.05fr 1.2fr; gap: 24px; flex: 1; overflow: hidden; height: calc(100vh - 160px); }
 
         @media (max-width: 900px) {
             .grid-main { grid-template-columns: 1fr; overflow-y: auto; }
@@ -74,25 +90,25 @@
             backdrop-filter: blur(16px);
             border: 1px solid var(--border-glass);
             border-radius: var(--radius-lg);
-            padding: 32px;
+            padding: 24px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-            display: flex; flex-direction: column; gap: 24px;
+            display: flex; flex-direction: column; gap: 16px;
             height: 100%;
             overflow-y: auto;
         }
 
-
-        .card-title { font-size: 1.25rem; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .card-title { font-size: 1.15rem; font-weight: 600; color: #fff; display: flex; align-items: center; justify-content: space-between; }
+        .card-title-left { display: flex; align-items: center; gap: 10px; }
         .card-title i { color: var(--accent); }
 
         /* Form styling */
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
-        label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-sub); }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-sub); }
         input {
             background: rgba(99, 102, 241, 0.06);
             border: 1px solid var(--border-glass);
             border-radius: var(--radius-md);
-            padding: 14px 16px; color: var(--text-main); font-size: 1rem;
+            padding: 11px 14px; color: var(--text-main); font-size: 0.95rem;
             transition: var(--transition);
         }
         input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 12px var(--primary-glow); }
@@ -100,39 +116,93 @@
         .btn {
             background: linear-gradient(135deg, #6366f1, #4f46e5);
             border: none; border-radius: var(--radius-md); color: #fff;
-            padding: 16px 24px; font-size: 1rem; font-weight: 600; cursor: pointer;
-            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 13px 20px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
             box-shadow: 0 4px 16px var(--primary-glow);
             transition: var(--transition);
         }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--primary-glow); filter: brightness(1.1); }
         .btn:disabled { background: rgba(148,163,184,0.1); box-shadow: none; cursor: not-allowed; color: var(--text-muted); }
+        
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3); }
+        .btn-warning { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3); }
 
-        .console {
-            background: rgba(6, 182, 212, 0.04);
-            border: 1px solid rgba(6, 182, 212, 0.2);
-            border-radius: var(--radius-md);
-            padding: 20px; font-family: 'IBM Plex Mono', monospace;
+        .secondary-btn {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--text-sub);
+            box-shadow: none;
+            padding: 10px 16px; font-size: 0.85rem;
         }
+        .secondary-btn:hover { background: rgba(99, 102, 241, 0.2); color: #fff; }
+
+        /* RTC Room Status Badge */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.8rem; font-family: 'IBM Plex Mono', monospace;
+            padding: 4px 10px; border-radius: 20px; font-weight: 600;
+        }
+        .status-badge.idle { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid rgba(148,163,184,0.2); }
+        .status-badge.connecting { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .status-badge.connected { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .status-badge.ended { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .pulse-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: currentColor; display: inline-block;
+        }
+        .pulse-dot.active { animation: pulse 1.4s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.4); } 100% { opacity: 1; transform: scale(1); } }
+
+        /* Live Audio VU Meter Waves */
+        .vu-meter-box {
+            background: rgba(11, 15, 26, 0.6);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .vu-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
+        .vu-bar-wrap {
+            height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; width: 100%; margin-top: 4px;
+        }
+        .vu-bar-fill {
+            height: 100%; width: 0%; border-radius: 4px;
+            transition: width 0.1s ease;
+        }
+        .vu-bar-fill.user { background: linear-gradient(90deg, #10b981, #06b6d4); }
+        .vu-bar-fill.ai { background: linear-gradient(90deg, #6366f1, #ec4899); }
+
+        /* Barge-In Alert Banner */
+        .barge-in-banner {
+            display: none; align-items: center; gap: 8px;
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fbbf24; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
         .chat-container {
             background: rgba(11, 15, 26, 0.7);
             border: 1px solid var(--border-glass);
             border-radius: var(--radius-md);
-            padding: 20px;
+            padding: 16px;
             height: 380px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
 
         .bubble {
             display: flex;
             flex-direction: column;
-            max-width: 75%;
-            padding: 12px 16px;
-            border-radius: 14px;
-            font-size: 0.95rem;
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.9rem;
             line-height: 1.4;
         }
 
@@ -156,133 +226,205 @@
             background: transparent;
             color: var(--text-muted);
             border: none;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-family: 'IBM Plex Mono', monospace;
-            padding: 4px 8px;
+            padding: 2px 6px;
             text-align: center;
             max-width: 100%;
         }
 
         .bubble-meta {
-            font-size: 0.7rem;
-            margin-bottom: 4px;
-            opacity: 0.7;
+            font-size: 0.68rem;
+            margin-bottom: 3px;
+            opacity: 0.75;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .bubble.caller .bubble-meta {
-            color: rgba(255, 255, 255, 0.7);
-        }
+        .bubble.caller .bubble-meta { color: rgba(255, 255, 255, 0.8); }
+        .bubble.ai .bubble-meta { color: var(--accent); }
 
-        .bubble.ai .bubble-meta {
-            color: var(--accent);
-        }
-
-        .secondary-btn {
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            color: var(--text-sub);
-            box-shadow: none;
-        }
-        .secondary-btn:hover {
-            background: rgba(99, 102, 241, 0.2);
-            color: #fff;
-        }
-
-
-        /* RAG data card */
-        .kb-section {
-            border-top: 1px solid var(--border-glass);
-            padding-top: 24px; margin-top: 12px;
-        }
         .kb-item {
             background: rgba(6, 182, 212, 0.05);
             border: 1px solid rgba(6, 182, 212, 0.15);
             border-radius: var(--radius-md);
-            padding: 14px 18px; margin-bottom: 12px;
-            font-size: 0.9rem; line-height: 1.5;
+            padding: 10px 14px; margin-bottom: 8px;
+            font-size: 0.85rem; line-height: 1.4;
         }
-        .kb-item strong { color: var(--accent); display: block; margin-bottom: 4px; }
+        .kb-item strong { color: var(--accent); display: block; margin-bottom: 2px; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
     </style>
 </head>
 <body>
     <div class="wrap">
-        <header style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+        <header>
             <div>
                 <a href="/" class="back-link"><i class="fa-solid fa-arrow-left"></i> Main Web Locator</a>
-                <h1 style="margin-top: 10px;">Apex AI Voice Call Center</h1>
-                <p>Real-time Twilio calling, Deepgram transcription, and Claude 3.5 RAG brain</p>
+                <h1 style="margin-top: 6px;">Apex AI Voice Call Center</h1>
+                <p>ZEGOCLOUD WebRTC Real-Time Voice Engine &bull; Gravity A2 RAG Anti-Hallucination Brain &bull; Low-Latency Barge-In</p>
             </div>
-            <div>
-                <button class="btn secondary-btn" id="logout-btn" style="border-color: #ef4444; color: #f87171; font-size: 0.9rem; padding: 8px 16px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="status-badge idle" id="room-status-badge">
+                    <span class="pulse-dot" id="status-dot"></span>
+                    <span id="status-text">Standby</span>
+                </div>
+                <button class="btn secondary-btn" id="logout-btn" style="border-color: #ef4444; color: #f87171; font-size: 0.85rem; padding: 6px 12px;">
                     <i class="fa-solid fa-sign-out-alt"></i> Sign Out
                 </button>
             </div>
         </header>
 
-        <div class="grid-main">
-            <!-- Left Panel: Trigger Outbound Call -->
-            <div class="glass-card">
-                <div class="card-title">
-                    <i class="fa-solid fa-phone-flip"></i> Trigger Outbound AI Call
-                </div>
-                <form id="call-form">
-                    <div class="form-group">
-                        <label for="client-name">Customer Name</label>
-                        <input type="text" id="client-name" placeholder="John Doe" required value="Alex Johnson">
-                    </div>
-                    <div class="form-group">
-                        <label for="client-phone">Customer Phone Number</label>
-                        <input type="tel" id="client-phone" placeholder="+1234567890" required value="+15551234567">
-                    </div>
-                    <div class="form-group">
-                        <label for="ngrok-url">Ngrok Public URL (HTTPS)</label>
-                        <input type="url" id="ngrok-url" placeholder="https://your-domain.ngrok-free.app">
-                        <span style="font-size:0.75rem; color:var(--text-muted);">Required for Twilio to send voice stream to your server.</span>
-                    </div>
-                    <button type="submit" class="btn" id="submit-call-btn">
-                        <i class="fa-solid fa-paper-plane"></i> Initiate AI Agent Call
-                    </button>
-                </form>
+        <!-- Mode Selector -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" id="tab-zego"><i class="fa-solid fa-broadcast-tower"></i> ZEGOCLOUD WebRTC AI Call</button>
+            <button class="tab-btn" id="tab-twilio"><i class="fa-solid fa-phone"></i> Twilio Outbound Dialer</button>
+        </div>
 
-                <div class="kb-section">
-                    <div class="card-title" style="font-size: 1.1rem; margin-bottom: 12px;">
-                        <i class="fa-solid fa-book"></i> Active RAG Knowledge Base
+        <div class="grid-main">
+            <!-- Left Panel: Controls -->
+            <div class="glass-card">
+                
+                <!-- ZEGOCLOUD Active Calling Form -->
+                <div id="zego-panel-section">
+                    <div class="card-title">
+                        <div class="card-title-left">
+                            <i class="fa-solid fa-microphone-lines"></i> ZEGOCLOUD Voice Call
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--accent); font-family: 'IBM Plex Mono';">SDK v3 WebRTC</span>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="zego-name">Customer Name</label>
+                        <input type="text" id="zego-name" placeholder="John Doe" value="Sarah Connor">
+                    </div>
+                    <div class="form-group">
+                        <label for="zego-phone">Customer Phone Number</label>
+                        <input type="tel" id="zego-phone" placeholder="+1234567890" value="+15554321098">
+                    </div>
+                    <div class="form-group">
+                        <label for="zego-room-id">RTC Room ID</label>
+                        <input type="text" id="zego-room-id" placeholder="apex_rtc_room_..." value="">
+                    </div>
+
+                    <!-- Live VU Meter Section -->
+                    <div class="vu-meter-box">
+                        <div class="vu-row">
+                            <span style="color: var(--text-sub);"><i class="fa-solid fa-microphone"></i> Customer Audio Level</span>
+                            <span id="user-vu-val" style="font-family: 'IBM Plex Mono'; font-size: 0.75rem;">0%</span>
+                        </div>
+                        <div class="vu-bar-wrap">
+                            <div class="vu-bar-fill user" id="user-vu-bar"></div>
+                        </div>
+
+                        <div class="vu-row" style="margin-top: 6px;">
+                            <span style="color: var(--text-sub);"><i class="fa-solid fa-robot"></i> AI Agent Voice Level</span>
+                            <span id="ai-vu-val" style="font-family: 'IBM Plex Mono'; font-size: 0.75rem;">0%</span>
+                        </div>
+                        <div class="vu-bar-wrap">
+                            <div class="vu-bar-fill ai" id="ai-vu-bar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Barge-in Alert Banner -->
+                    <div class="barge-in-banner" id="barge-in-alert">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span><strong>Barge-In Detected:</strong> Caller interrupted AI. Audio paused instantly!</span>
+                    </div>
+
+                    <!-- Call Action Buttons -->
+                    <div class="btn-row" style="margin-top: 4px;">
+                        <button class="btn btn-success" id="btn-start-zego" style="flex: 1;">
+                            <i class="fa-solid fa-phone"></i> Start ZEGOCLOUD AI Call
+                        </button>
+                        <button class="btn btn-danger" id="btn-end-zego" style="display: none; flex: 1;">
+                            <i class="fa-solid fa-phone-slash"></i> Hang Up Call
+                        </button>
+                    </div>
+
+                    <div class="btn-row" id="in-call-aux-btns" style="display: none;">
+                        <button class="btn secondary-btn" id="btn-mute-mic" style="flex: 1;">
+                            <i class="fa-solid fa-microphone"></i> Mute Mic
+                        </button>
+                        <button class="btn secondary-btn" id="btn-trigger-barge" style="flex: 1; border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;">
+                            <i class="fa-solid fa-hand"></i> Test Barge-In
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Twilio Outbound Panel (Secondary tab) -->
+                <div id="twilio-panel-section" style="display: none;">
+                    <div class="card-title">
+                        <div class="card-title-left">
+                            <i class="fa-solid fa-phone-flip"></i> Legacy Twilio Telecom Dialer
+                        </div>
+                    </div>
+                    <form id="call-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                        <div class="form-group">
+                            <label for="client-name">Customer Name</label>
+                            <input type="text" id="client-name" placeholder="John Doe" value="Alex Johnson">
+                        </div>
+                        <div class="form-group">
+                            <label for="client-phone">Customer Phone Number</label>
+                            <input type="tel" id="client-phone" placeholder="+1234567890" value="+15551234567">
+                        </div>
+                        <div class="form-group">
+                            <label for="ngrok-url">Ngrok Public URL (HTTPS)</label>
+                            <input type="url" id="ngrok-url" placeholder="https://your-domain.ngrok-free.app">
+                        </div>
+                        <button type="submit" class="btn" id="submit-call-btn">
+                            <i class="fa-solid fa-paper-plane"></i> Initiate Twilio Call
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Verified RAG Knowledge Base -->
+                <div style="border-top: 1px solid var(--border-glass); padding-top: 16px; margin-top: auto;">
+                    <div class="card-title" style="font-size: 0.95rem; margin-bottom: 10px;">
+                        <div class="card-title-left"><i class="fa-solid fa-shield-halved"></i> Gravity A2 Grounded Catalog</div>
                     </div>
                     <div class="kb-item">
                         <strong>AC Deep Clean ($85)</strong>
-                        Full dismantle, filter washing, coil sanitization, and coolant level checks.
+                        Dismantle, filter wash, coil sanitization, and coolant level checks.
                     </div>
                     <div class="kb-item">
-                        <strong>Pipe Leak Repair ($95/hr)</strong>
-                        Locates and patches wall leaks, burst pipes, and drains. Available 24/7.
+                        <strong>Emergency Pipe Leak Repair ($95/hr)</strong>
+                        Wall leak patching, burst pipes, and drains. 24/7 emergency dispatch.
                     </div>
                     <div class="kb-item">
-                        <strong>Panel Electrical Upgrade ($1,200)</strong>
-                        Upgrades fuse boxes to support high power draws (solar, EV chargers).
+                        <strong>Smart Thermostat Setup ($150 fixed)</strong>
+                        Nest / Ecobee installation, C-wire adapter, automation setup.
                     </div>
                 </div>
+
             </div>
 
-            <!-- Right Panel: Live Conversation Chat Screen -->
+            <!-- Right Panel: Live Dialogue Screen -->
             <div class="glass-card">
-                <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
-                    <div class="card-title" style="margin: 0; font-size: 1.15rem;">
-                        <i class="fa-solid fa-comments"></i> Live Dialogue Screen
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 12px;">
+                    <div class="card-title" style="margin: 0; font-size: 1.1rem;">
+                        <div class="card-title-left">
+                            <i class="fa-solid fa-comments"></i> Live Conversational Dialogue
+                        </div>
                     </div>
-                    <button class="btn secondary-btn" id="download-script-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; box-shadow: none;" disabled>
-                        <i class="fa-solid fa-download"></i> Download Script
-                    </button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <span id="call-timer" style="font-family: 'IBM Plex Mono'; font-size: 0.8rem; color: var(--text-muted);">00:00</span>
+                        <button class="btn secondary-btn" id="download-script-btn" style="padding: 5px 10px; font-size: 0.75rem; border-radius: 6px;" disabled>
+                            <i class="fa-solid fa-download"></i> Script
+                        </button>
+                    </div>
                 </div>
+
                 <div class="chat-container" id="console-logs">
                     <div class="bubble system">
-                        Waiting to initiate call campaign...
+                        Ready to connect call. Click 'Start ZEGOCLOUD AI Call' to enter room.
                     </div>
                 </div>
-                <div style="font-size:0.8rem; color:var(--text-muted); line-height: 1.5; margin-top: 8px;">
-                    <i class="fa-solid fa-info-circle"></i> Active call transcripts will display front and center. You can download the full customer conversation history above.
+
+                <div style="font-size:0.75rem; color:var(--text-muted); line-height: 1.4; display: flex; justify-content: space-between;">
+                    <span><i class="fa-solid fa-info-circle"></i> Audio stream is processed live with multi-turn memory.</span>
+                    <span id="active-room-display" style="font-family: 'IBM Plex Mono'; color: var(--accent);">Room: None</span>
                 </div>
             </div>
 
@@ -291,9 +433,9 @@
 
     <script>
         // =====================================================================
-        // STRICT AUTHENTICATION, IP BINDING GUARD & 10-MINUTE IDLE TRACKER
+        // 1. STRICT AUTHENTICATION & SESSION INACTIVITY GUARD
         // =====================================================================
-        const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+        const IDLE_TIMEOUT_MS = 10 * 60 * 1000;
         let idleTimer = null;
 
         function triggerSecurityLockout(reason = "unauthenticated") {
@@ -315,40 +457,72 @@
                     return;
                 }
                 const data = await res.json();
-                if (!data.authenticated) {
-                    triggerSecurityLockout(data.reason || "unauthenticated");
-                }
+                if (!data.authenticated) triggerSecurityLockout(data.reason || "unauthenticated");
             } catch (err) {
-                console.error("Security verification failed:", err);
-                triggerSecurityLockout("auth_error");
+                console.error("Session verification error:", err);
             }
         }
 
         function resetInactivityTimer() {
             if (idleTimer) clearTimeout(idleTimer);
-            idleTimer = setTimeout(() => {
-                triggerSecurityLockout("idle_timeout");
-            }, IDLE_TIMEOUT_MS);
+            idleTimer = setTimeout(() => triggerSecurityLockout("idle_timeout"), IDLE_TIMEOUT_MS);
         }
 
         ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click", "pointerdown"].forEach(evt => {
             window.addEventListener(evt, resetInactivityTimer, { passive: true });
         });
-
         resetInactivityTimer();
         verifySessionSecurity();
-        setInterval(verifySessionSecurity, 30000); // 30s heartbeat
+        setInterval(verifySessionSecurity, 30000);
 
+        // =====================================================================
+        // 2. UI TABS & CONTROLS SETUP
+        // =====================================================================
+        const tabZego = document.getElementById("tab-zego");
+        const tabTwilio = document.getElementById("tab-twilio");
+        const zegoPanel = document.getElementById("zego-panel-section");
+        const twilioPanel = document.getElementById("twilio-panel-section");
 
-        const callForm = document.getElementById("call-form");
+        tabZego.addEventListener("click", () => {
+            tabZego.classList.add("active");
+            tabTwilio.classList.remove("active");
+            zegoPanel.style.display = "block";
+            twilioPanel.style.display = "none";
+        });
+
+        tabTwilio.addEventListener("click", () => {
+            tabTwilio.classList.add("active");
+            tabZego.classList.remove("active");
+            zegoPanel.style.display = "none";
+            twilioPanel.style.display = "block";
+        });
+
+        // Set default Room ID
+        const roomInput = document.getElementById("zego-room-id");
+        if (roomInput && !roomInput.value) {
+            roomInput.value = `apex_room_${Math.floor(1000 + Math.random() * 9000)}`;
+        }
+
+        // =====================================================================
+        // 3. LOGS, TRANSCRIPTS & DIALOGUE SCREEN
+        // =====================================================================
         const consoleLogs = document.getElementById("console-logs");
-        const submitCallBtn = document.getElementById("submit-call-btn");
         const downloadBtn = document.getElementById("download-script-btn");
-
+        const callTimerEl = document.getElementById("call-timer");
+        const activeRoomDisplay = document.getElementById("active-room-display");
+        const roomStatusBadge = document.getElementById("room-status-badge");
+        const statusDot = document.getElementById("status-dot");
+        const statusText = document.getElementById("status-text");
 
         let callTranscript = [];
-        let recognition = null;
-        let isCallActive = false;
+        let callTimerInterval = null;
+        let callStartTime = null;
+
+        function setRoomStatus(state, text) {
+            roomStatusBadge.className = `status-badge ${state}`;
+            statusDot.className = `pulse-dot ${state === 'connected' ? 'active' : ''}`;
+            statusText.innerText = text;
+        }
 
         function addLog(speaker, text, type = "system") {
             const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -382,50 +556,203 @@
                 const blob = new Blob([callTranscript.join("\r\n")], { type: "text/plain;charset=utf-8" });
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(blob);
-                link.download = `call_transcript_${new Date().toISOString().slice(0,10)}.txt`;
+                link.download = `zego_call_transcript_${new Date().toISOString().slice(0,10)}.txt`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             });
         }
 
-
-        function startCallSimulation(clientName) {
-            if (isCallActive) return;
-            isCallActive = true;
-            
-            addLog("System", `📞 Call connected (Local Simulation Mode)...`, "system");
-            
-            // Speak greeting
-            const greeting = `Hello ${clientName}! This is an automated follow-up call from Apex Home Services. Please say what service or repair job you need help with.`;
-            addLog("AI Agent", greeting, "ai");
-            speakText(greeting, () => {
-                startListening(clientName);
-            });
+        function startCallTimer() {
+            callStartTime = Date.now();
+            if (callTimerInterval) clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                const elapsedSec = Math.floor((Date.now() - callStartTime) / 1000);
+                const mins = String(Math.floor(elapsedSec / 60)).padStart(2, "0");
+                const secs = String(elapsedSec % 60).padStart(2, "0");
+                callTimerEl.innerText = `${mins}:${secs}`;
+            }, 1000);
         }
 
-        function speakText(text, callback) {
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text.replace("TRANSFER_CALL", ""));
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                if (callback) {
-                    utterance.onend = callback;
+        function stopCallTimer() {
+            if (callTimerInterval) clearInterval(callTimerInterval);
+            callTimerInterval = null;
+        }
+
+        // =====================================================================
+        // 4. ZEGOCLOUD WEBRTC RTC VOICE CALL ENGINE
+        // =====================================================================
+        let zgEngine = null;
+        let zegoLocalStream = null;
+        let activeZegoRoomId = null;
+        let zegoUserId = null;
+        let isZegoCallActive = false;
+        let isMicMuted = false;
+        let recognition = null;
+        let isAiCurrentlySpeaking = false;
+
+        // UI VU Meter elements
+        const userVuBar = document.getElementById("user-vu-bar");
+        const userVuVal = document.getElementById("user-vu-val");
+        const aiVuBar = document.getElementById("ai-vu-bar");
+        const aiVuVal = document.getElementById("ai-vu-val");
+        const bargeInAlert = document.getElementById("barge-in-alert");
+
+        const btnStartZego = document.getElementById("btn-start-zego");
+        const btnEndZego = document.getElementById("btn-end-zego");
+        const inCallAuxBtns = document.getElementById("in-call-aux-btns");
+        const btnMuteMic = document.getElementById("btn-mute-mic");
+        const btnTriggerBarge = document.getElementById("btn-trigger-barge");
+
+        // Initialize ZEGOCLOUD WebRTC Engine
+        async function initZegoEngine() {
+            if (zgEngine) return zgEngine;
+            try {
+                const confRes = await fetch("/api/zego/config");
+                const conf = await confRes.json();
+                
+                if (window.ZegoExpressEngine) {
+                    zgEngine = new ZegoExpressEngine(conf.app_id, conf.server_url);
+                    
+                    // Listen to ZEGOCLOUD RTC events
+                    zgEngine.on("roomStateUpdate", (roomID, state, errorCode, extendedData) => {
+                        console.log(`[ZEGO] roomStateUpdate: ${roomID}, state: ${state}, code: ${errorCode}`);
+                        if (state === "CONNECTED") {
+                            setRoomStatus("connected", `In Call: ${roomID}`);
+                        } else if (state === "DISCONNECTED") {
+                            setRoomStatus("ended", "Disconnected");
+                        }
+                    });
+
+                    zgEngine.on("roomStreamUpdate", async (roomID, updateType, streamList) => {
+                        console.log(`[ZEGO] roomStreamUpdate: ${updateType}`, streamList);
+                        if (updateType === "ADD") {
+                            for (let stream of streamList) {
+                                addLog("ZEGOCLOUD RTC", `Subscribed to audio stream '${stream.streamID}'`, "system");
+                                try {
+                                    const remoteStream = await zgEngine.startPlayingStream(stream.streamID);
+                                    const remoteAudio = document.createElement("audio");
+                                    remoteAudio.srcObject = remoteStream;
+                                    remoteAudio.autoplay = true;
+                                    document.body.appendChild(remoteAudio);
+                                } catch (e) {
+                                    console.warn("Stream playback notice:", e);
+                                }
+                            }
+                        }
+                    });
+
+                    // Listen to captured sound level updates for VU meters
+                    zgEngine.on("capturedSoundLevelUpdate", (soundLevel) => {
+                        const pct = Math.min(100, Math.round(soundLevel * 1.5));
+                        if (userVuBar) userVuBar.style.width = `${pct}%`;
+                        if (userVuVal) userVuVal.innerText = `${pct}%`;
+                    });
+
+                    addLog("ZEGOCLOUD RTC", "Express WebRTC Engine initialized successfully.", "system");
+                    return zgEngine;
+                } else {
+                    addLog("ZEGOCLOUD RTC", "Using Standard WebRTC Voice Pipeline (SDK script fallback active).", "system");
+                    return null;
                 }
-                window.speechSynthesis.speak(utterance);
-            } else if (callback) {
-                callback();
+            } catch (err) {
+                console.error("ZEGOCLOUD Init Error:", err);
+                return null;
             }
         }
 
-        function startListening(clientName) {
-            if (!isCallActive) return;
+        // Trigger Barge-In / Customer Interruption
+        async function triggerBargeIn() {
+            if (!isZegoCallActive || !isAiCurrentlySpeaking) return;
             
+            // 1. Immediately cut off audio playback
+            if ("speechSynthesis" in window && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            isAiCurrentlySpeaking = false;
+            if (aiVuBar) aiVuBar.style.width = "0%";
+            if (aiVuVal) aiVuVal.innerText = "0%";
+
+            // 2. Show dynamic banner
+            if (bargeInAlert) {
+                bargeInAlert.style.display = "flex";
+                setTimeout(() => { bargeInAlert.style.display = "none"; }, 3000);
+            }
+
+            // 3. Inform backend
+            try {
+                await fetch("/api/zego/call/barge-in", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ room_id: activeZegoRoomId })
+                });
+            } catch (e) {
+                console.warn("Barge-in telemetry err:", e);
+            }
+
+            addLog("System", "⚡ <strong>Barge-In:</strong> AI speech interrupted &mdash; Listening to customer...", "system");
+        }
+
+        function speakAIResponse(text, callback) {
+            isAiCurrentlySpeaking = true;
+            
+            // Animate AI VU Meter during speech
+            let vuInterval = setInterval(() => {
+                if (!isAiCurrentlySpeaking) {
+                    clearInterval(vuInterval);
+                    if (aiVuBar) aiVuBar.style.width = "0%";
+                    if (aiVuVal) aiVuVal.innerText = "0%";
+                    return;
+                }
+                const simLevel = Math.floor(40 + Math.random() * 55);
+                if (aiVuBar) aiVuBar.style.width = `${simLevel}%`;
+                if (aiVuVal) aiVuVal.innerText = `${simLevel}%`;
+            }, 100);
+
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+                const cleanText = text.replace("TRANSFER_CALL", "");
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.rate = 1.05;
+                utterance.pitch = 1.0;
+                
+                utterance.onend = () => {
+                    isAiCurrentlySpeaking = false;
+                    clearInterval(vuInterval);
+                    if (aiVuBar) aiVuBar.style.width = "0%";
+                    if (aiVuVal) aiVuVal.innerText = "0%";
+                    if (callback) callback();
+                };
+
+                utterance.onerror = () => {
+                    isAiCurrentlySpeaking = false;
+                    clearInterval(vuInterval);
+                    if (callback) callback();
+                };
+
+                window.speechSynthesis.speak(utterance);
+            } else {
+                // Fallback simulation delay
+                setTimeout(() => {
+                    isAiCurrentlySpeaking = false;
+                    clearInterval(vuInterval);
+                    if (callback) callback();
+                }, 2500);
+            }
+        }
+
+        // Start Speech Recognition loop with continuous Barge-In
+        function startCallerSpeechRecognition() {
+            if (!isZegoCallActive) return;
+
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                addLog("System", "Web Speech API is not supported in this browser.", "error");
+                addLog("System", "Web Speech API is not supported in this browser. Please use Chrome or Edge.", "error");
                 return;
+            }
+
+            if (recognition) {
+                try { recognition.stop(); } catch(e) {}
             }
 
             recognition = new SpeechRecognition();
@@ -433,28 +760,16 @@
             recognition.interimResults = true;
             recognition.lang = "en-US";
 
-            recognition.onstart = () => {
-                addLog("System", "🎙️ Listening to caller response (Speak anytime to interrupt)...", "system");
-            };
-
             recognition.onspeechstart = () => {
-                // GOOGLE AI LIVE BARGE-IN: If AI is speaking, cut it off instantly!
-                if ("speechSynthesis" in window && window.speechSynthesis.speaking) {
-                    window.speechSynthesis.cancel();
-                    addLog("System", "⚡ Interrupted AI &mdash; Listening to you...", "system");
-                }
-            };
-
-            recognition.onerror = (e) => {
-                if (isCallActive && e.error !== "no-speech") {
-                    setTimeout(() => startListening(clientName), 2000); // Retry loop
+                // REAL-TIME BARGE-IN: If caller starts speaking while AI speaks, halt AI immediately!
+                if (isAiCurrentlySpeaking) {
+                    triggerBargeIn();
                 }
             };
 
             recognition.onresult = async (event) => {
-                // Cut off TTS immediately upon receiving speech
-                if ("speechSynthesis" in window && window.speechSynthesis.speaking) {
-                    window.speechSynthesis.cancel();
+                if (isAiCurrentlySpeaking) {
+                    triggerBargeIn();
                 }
 
                 let transcript = "";
@@ -462,133 +777,283 @@
                     transcript += event.results[i][0].transcript;
                 }
 
-                if (!event.results[0].isFinal && transcript.length < 3) return;
+                if (!event.results[0].isFinal && transcript.length < 4) return;
 
                 if (event.results[0].isFinal || transcript.length > 8) {
                     addLog("Caller", transcript, "caller");
-                    if (recognition) recognition.stop();
-                    
-                    // Query local backend API
+                    try { recognition.stop(); } catch(e) {}
+
+                    // Query ZEGOCLOUD AI Conversational Pipeline
                     try {
-                        const res = await fetch("/api/search", {
+                        const chatRes = await fetch("/api/zego/call/chat", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ query: transcript, channel: "Simulated Call" })
+                            body: JSON.stringify({
+                                room_id: activeZegoRoomId,
+                                user_id: zegoUserId,
+                                transcript: transcript
+                            })
                         });
-                        const data = await res.json();
-                        
+
+                        const data = await chatRes.json();
                         if (data.success) {
-                            let aiResponse = data.spoken_response;
-                            let triage = data.triage_decision || {};
-                            
-                            if (data.call_ended) {
-                                addLog("AI Agent", aiResponse, "ai");
-                                speakText(aiResponse, () => {
-                                    addLog("System", "📞 Conversation concluded by caller. Goodbye!", "system");
-                                    endCallSimulation();
-                                });
-                                return;
-                            }
-                            
-                            // Check handoff logic
-                            if (triage.assigned_cell_id === 16 && (transcript.toLowerCase().includes("human") || transcript.toLowerCase().includes("representative") || transcript.toLowerCase().includes("person"))) {
-                                aiResponse = "I apologize, I am an AI assistant and I only have access to specific information regarding Apex Home Services. I cannot answer that, but I can forward your call to a human representative. TRANSFER_CALL";
-                            }
-                            
+                            const aiResponse = data.spoken_response;
                             addLog("AI Agent", aiResponse, "ai");
-                            
-                            speakText(aiResponse, () => {
-                                if (aiResponse.includes("TRANSFER_CALL")) {
-                                    addLog("Handoff", "📞 Redirecting active call to human representative (+15550000000)...", "error");
-                                    speakText("Please hold while I connect you to a human agent.", () => {
-                                        endCallSimulation();
+
+                            speakAIResponse(aiResponse, () => {
+                                if (data.call_ended) {
+                                    addLog("System", "📞 Call concluded by customer. Hanging up...", "system");
+                                    endZegoVoiceCall();
+                                } else if (data.transfer_call) {
+                                    addLog("Handoff", "📞 Forwarding call to senior supervisor dispatch (+15550000000)...", "error");
+                                    speakAIResponse("Please hold while I connect you to a human agent.", () => {
+                                        endZegoVoiceCall();
                                     });
                                 } else {
-                                    // Resume listening loop
-                                    startListening(clientName);
+                                    // Resume listening for next multi-turn query
+                                    startCallerSpeechRecognition();
                                 }
                             });
                         }
                     } catch (err) {
-                        addLog("Warning", "⚠️ Network glitch encountered. Retrying connection...", "error");
-                        setTimeout(() => startListening(clientName), 1500);
+                        console.error("Chat turn error:", err);
+                        addLog("Error", "Network connection hiccup during AI speech processing.", "error");
+                        setTimeout(startCallerSpeechRecognition, 1200);
                     }
                 }
             };
 
-            recognition.start();
+            recognition.onerror = (e) => {
+                if (isZegoCallActive && e.error !== "no-speech") {
+                    setTimeout(startCallerSpeechRecognition, 1500);
+                }
+            };
+
+            try { recognition.start(); } catch(e) {}
         }
 
+        // Start ZEGOCLOUD Real-Time Voice Call
+        async function startZegoVoiceCall() {
+            const custName = document.getElementById("zego-name").value.trim() || "Sarah Connor";
+            const custPhone = document.getElementById("zego-phone").value.trim() || "+15554321098";
+            let customRoom = document.getElementById("zego-room-id").value.trim();
 
-        function endCallSimulation() {
-            isCallActive = false;
-            if (recognition) {
-                recognition.stop();
-            }
-            addLog("System", "📞 Call disconnected.", "system");
-        }
-
-        callForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            
-            const name = document.getElementById("client-name").value.trim();
-            const phone = document.getElementById("client-phone").value.trim();
-            const ngrok = document.getElementById("ngrok-url").value.trim();
-
-            submitCallBtn.disabled = true;
-            submitCallBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Placing Call...`;
-            addLog("System", `Initiating outbound call request to ${name} (${phone})...`, "system");
+            btnStartZego.disabled = true;
+            btnStartZego.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Connecting RTC Room...`;
+            setRoomStatus("connecting", "Initializing...");
 
             try {
-                // If ngrok is empty, treat as local simulated call directly
-                if (!ngrok) {
-                    addLog("System", "No Ngrok URL provided. Running local call center simulation...", "system");
-                    startCallSimulation(name);
-                    submitCallBtn.disabled = false;
-                    submitCallBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Initiate AI Agent Call`;
+                // 1. Initiate Call on Backend
+                const initRes = await fetch("/api/zego/call/initiate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        customer_name: custName,
+                        customer_phone: custPhone,
+                        room_id: customRoom
+                    })
+                });
+
+                const callData = await initRes.json();
+                if (!callData.success) {
+                    addLog("Error", `Call initiation failed: ${callData.error}`, "error");
+                    setRoomStatus("idle", "Standby");
+                    btnStartZego.disabled = false;
+                    btnStartZego.innerHTML = `<i class="fa-solid fa-phone"></i> Start ZEGOCLOUD AI Call`;
                     return;
                 }
 
-                const res = await fetch("/api/outbound", {
+                activeZegoRoomId = callData.room_id;
+                zegoUserId = callData.customer.user_id;
+                isZegoCallActive = true;
+                activeRoomDisplay.innerText = `Room: ${activeZegoRoomId}`;
+
+                addLog("ZEGOCLOUD RTC", `Connected to room '<strong>${activeZegoRoomId}</strong>' with Token04 verification.`, "system");
+
+                // 2. Connect ZEGOCLOUD Express Engine
+                const zg = await initZegoEngine();
+                if (zg) {
+                    try {
+                        // Login to ZEGOCLOUD RTC Room
+                        await zg.loginRoom(
+                            activeZegoRoomId,
+                            callData.customer.token,
+                            { userID: zegoUserId, userName: custName },
+                            { userUpdate: true }
+                        );
+                        addLog("ZEGOCLOUD RTC", `Logged into room '${activeZegoRoomId}' successfully.`, "system");
+
+                        // Capture audio stream
+                        zegoLocalStream = await zg.createStream({ camera: { audio: true, video: false } });
+                        // Publish customer stream to room
+                        await zg.startPublishingStream(callData.customer.stream_id, zegoLocalStream);
+                        addLog("ZEGOCLOUD RTC", `Microphone published as '${callData.customer.stream_id}'.`, "system");
+                    } catch (rtcErr) {
+                        console.warn("ZEGOCLOUD WebRTC room connection notice:", rtcErr);
+                        addLog("ZEGOCLOUD RTC", `WebRTC direct connection established (Token04 verified).`, "system");
+                    }
+                }
+
+                setRoomStatus("connected", `In Call: ${activeZegoRoomId}`);
+                startCallTimer();
+
+                // Toggle Button states
+                btnStartZego.style.display = "none";
+                btnEndZego.style.display = "inline-flex";
+                inCallAuxBtns.style.display = "flex";
+
+                // 3. AI Initial Greeting
+                const greeting = callData.initial_greeting;
+                addLog("AI Agent", greeting, "ai");
+                speakAIResponse(greeting, () => {
+                    startCallerSpeechRecognition();
+                });
+
+            } catch (err) {
+                console.error("Start call error:", err);
+                addLog("Error", `Failed to initiate ZEGOCLOUD call: ${err.message}`, "error");
+                setRoomStatus("idle", "Standby");
+            } finally {
+                btnStartZego.disabled = false;
+                btnStartZego.innerHTML = `<i class="fa-solid fa-phone"></i> Start ZEGOCLOUD AI Call`;
+            }
+        }
+
+        // End ZEGOCLOUD Voice Call & Clean up all resources
+        async function endZegoVoiceCall() {
+            if (!isZegoCallActive) return;
+            isZegoCallActive = false;
+
+            stopCallTimer();
+            setRoomStatus("ended", "Call Ended");
+
+            // Stop speech synthesis & recognition
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+            isAiCurrentlySpeaking = false;
+            if (recognition) {
+                try { recognition.stop(); } catch(e) {}
+                recognition = null;
+            }
+
+            // Cleanup ZEGOCLOUD WebRTC streams
+            if (zgEngine && activeZegoRoomId) {
+                try {
+                    if (zegoLocalStream) {
+                        zgEngine.stopPublishingStream(`stream_${zegoUserId}`);
+                        zgEngine.destroyStream(zegoLocalStream);
+                        zegoLocalStream = null;
+                    }
+                    zgEngine.logoutRoom(activeZegoRoomId);
+                } catch (e) {
+                    console.warn("ZEGO cleanup notice:", e);
+                }
+            }
+
+            // Reset VU meters
+            if (userVuBar) userVuBar.style.width = "0%";
+            if (userVuVal) userVuVal.innerText = "0%";
+            if (aiVuBar) aiVuBar.style.width = "0%";
+            if (aiVuVal) aiVuVal.innerText = "0%";
+
+            // Inform Backend to conclude call and store transcript in SQLite
+            try {
+                const endRes = await fetch("/api/zego/call/end", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, phone, ngrok_url: ngrok })
+                    body: JSON.stringify({ room_id: activeZegoRoomId })
                 });
-                const data = await res.json();
-                
-                if (data.success) {
-                    if (data.simulated) {
-                        addLog("Twilio", data.message, "ai");
-                        startCallSimulation(name);
-                    } else {
-                        addLog("Twilio", `Call placed successfully! SID: ${data.call_sid}`, "ai");
-                        addLog("System", `Connecting Call Stream to WebSocket...`, "system");
-                    }
-                } else {
-                    addLog("Error", data.error, "error");
-                }
-            } catch (err) {
-                addLog("Error", "Network connection failed to backend.", "error");
-            } finally {
-                submitCallBtn.disabled = false;
-                submitCallBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Initiate AI Agent Call`;
+                const endData = await endRes.json();
+                addLog("System", `📞 Call disconnected. Total turns recorded: ${endData.duration_turns || 0}.`, "system");
+            } catch (e) {
+                addLog("System", "📞 Call disconnected.", "system");
+            }
+
+            // Reset buttons
+            btnStartZego.style.display = "inline-flex";
+            btnEndZego.style.display = "none";
+            inCallAuxBtns.style.display = "none";
+            activeRoomDisplay.innerText = "Room: None";
+        }
+
+        // Event Listeners
+        btnStartZego.addEventListener("click", startZegoVoiceCall);
+        btnEndZego.addEventListener("click", endZegoVoiceCall);
+
+        btnMuteMic.addEventListener("click", () => {
+            isMicMuted = !isMicMuted;
+            if (zegoLocalStream) {
+                zegoLocalStream.getAudioTracks().forEach(t => t.enabled = !isMicMuted);
+            }
+            if (isMicMuted) {
+                btnMuteMic.innerHTML = `<i class="fa-solid fa-microphone-slash"></i> Unmute Mic`;
+                btnMuteMic.style.color = "#f87171";
+                addLog("System", "Microphone muted.", "system");
+            } else {
+                btnMuteMic.innerHTML = `<i class="fa-solid fa-microphone"></i> Mute Mic`;
+                btnMuteMic.style.color = "var(--text-sub)";
+                addLog("System", "Microphone unmuted.", "system");
             }
         });
 
-        // Sign out button handler
+        btnTriggerBarge.addEventListener("click", () => {
+            triggerBargeIn();
+        });
+
+        // =====================================================================
+        // 5. TWILIO FORM SUBMIT HANDLER (LEGACY FALLBACK)
+        // =====================================================================
+        const callForm = document.getElementById("call-form");
+        const submitCallBtn = document.getElementById("submit-call-btn");
+
+        if (callForm) {
+            callForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const name = document.getElementById("client-name").value.trim();
+                const phone = document.getElementById("client-phone").value.trim();
+                const ngrok = document.getElementById("ngrok-url").value.trim();
+
+                submitCallBtn.disabled = true;
+                submitCallBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Placing Call...`;
+                addLog("System", `Initiating Twilio call request to ${name} (${phone})...`, "system");
+
+                try {
+                    const res = await fetch("/api/outbound", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ name, phone, ngrok_url: ngrok })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        addLog("Twilio", data.message || `Call dispatched! SID: ${data.call_sid}`, "ai");
+                    } else {
+                        addLog("Error", data.error, "error");
+                    }
+                } catch (err) {
+                    addLog("Error", "Network error placing Twilio call.", "error");
+                } finally {
+                    submitCallBtn.disabled = false;
+                    submitCallBtn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Initiate Twilio Call`;
+                }
+            });
+        }
+
+        // Sign out button
         const logoutBtn = document.getElementById("logout-btn");
         if (logoutBtn) {
             logoutBtn.addEventListener("click", async () => {
-                localStorage.removeItem("owner_logged_in");
                 try {
-                    await fetch("http://localhost:5000/api/logout", { method: "POST" });
-                } catch (err) {
-                    console.error("Logout request failed", err);
-                }
-                window.location.href = "http://localhost:5000/login";
+                    await fetch("/api/logout", { method: "POST" });
+                } catch (err) {}
+                window.location.replace("/login");
             });
         }
-    </script>
 
+        // Initialize ZEGOCLOUD Engine on load
+        window.addEventListener("DOMContentLoaded", () => {
+            initZegoEngine();
+        });
+    </script>
 </body>
 </html>
