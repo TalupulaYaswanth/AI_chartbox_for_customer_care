@@ -1941,7 +1941,7 @@ def api_upload_kb():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("FLASK_PORT", 5000))
+    port = int(os.environ.get("PORT", os.environ.get("FLASK_PORT", 5000)))
     print(f"\n=======================================================")
     print(f" [START] School Info & Voice Search Backend Started")
     print(f" [WEB]   Local Web UI: http://127.0.0.1:{port}")

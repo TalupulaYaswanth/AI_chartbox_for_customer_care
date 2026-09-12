@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: ai-voice-call-center
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.12
+      - key: ZEGO_APP_ID
+        value: "1683271293"
+      - key: ZEGO_SERVER_SECRET
+        sync: false
+      - key: ZEGO_APP_SIGN
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_PORT
+        value: "5000"
