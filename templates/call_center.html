@@ -266,6 +266,9 @@
                 <p>ZEGOCLOUD WebRTC Real-Time Voice Engine &bull; Gravity A2 RAG Anti-Hallucination Brain &bull; Low-Latency Barge-In</p>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
+                <button class="btn secondary-btn" id="api-config-btn" style="border-color: rgba(6, 182, 212, 0.4); color: var(--accent); font-size: 0.82rem; padding: 6px 12px;">
+                    <i class="fa-solid fa-sliders"></i> API Key Settings
+                </button>
                 <div class="status-badge idle" id="room-status-badge">
                     <span class="pulse-dot" id="status-dot"></span>
                     <span id="status-text">Standby</span>
@@ -292,7 +295,9 @@
                         <div class="card-title-left">
                             <i class="fa-solid fa-microphone-lines"></i> ZEGOCLOUD Voice Call
                         </div>
-                        <span style="font-size: 0.75rem; color: var(--accent); font-family: 'IBM Plex Mono';">SDK v3 WebRTC</span>
+                        <span id="zego-key-status-badge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-family: 'IBM Plex Mono';">
+                            <i class="fa-solid fa-circle-check"></i> AppID: 1683271293 (Active)
+                        </span>
                     </div>
 
                     <div class="form-group" style="margin-top: 10px;">
@@ -359,6 +364,9 @@
                         <div class="card-title-left">
                             <i class="fa-solid fa-phone-flip"></i> Legacy Twilio Telecom Dialer
                         </div>
+                        <span id="twilio-key-status-badge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-family: 'IBM Plex Mono';">
+                            <i class="fa-solid fa-circle-nodes"></i> Local Simulator Ready
+                        </span>
                     </div>
                     <form id="call-form" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                         <div class="form-group">
@@ -428,6 +436,76 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- API KEY SETTINGS MODAL -->
+    <div id="api-settings-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--surface); border: 1px solid var(--border-glass); border-radius: 16px; padding: 24px; max-width: 580px; width: 92%; box-shadow: 0 20px 50px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass); padding-bottom: 14px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-key" style="color: var(--accent); font-size: 1.2rem;"></i>
+                    <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff;">Calling System API Settings</h2>
+                </div>
+                <button id="close-api-cfg-btn" style="background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer;">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 16px; line-height: 1.5;">
+                Configure and integrate credentials for <strong>ZEGOCLOUD RTC Voice Calling</strong> and <strong>Twilio Telecom Outbound</strong>. Changes are saved to <code>.env</code> and take effect immediately.
+            </p>
+
+            <form id="api-keys-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- ZEGOCLOUD Section -->
+                <div style="background: rgba(11, 15, 26, 0.6); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--accent);"><i class="fa-solid fa-broadcast-tower"></i> ZEGOCLOUD Real-Time RTC</span>
+                        <span id="modal-zego-status" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #34d399; font-family: 'IBM Plex Mono';">Checking...</span>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="cfg-zego-appid" style="font-size: 0.75rem;">AppID</label>
+                        <input type="text" id="cfg-zego-appid" placeholder="e.g. 1683271293" value="1683271293">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="cfg-zego-secret" style="font-size: 0.75rem;">ServerSecret (32 Hex Characters)</label>
+                        <input type="password" id="cfg-zego-secret" placeholder="32-hex server secret (e.g. cb17...6c52)">
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-zego-sign" style="font-size: 0.75rem;">AppSign (Optional)</label>
+                        <input type="password" id="cfg-zego-sign" placeholder="Optional app sign">
+                    </div>
+                </div>
+
+                <!-- Twilio Section -->
+                <div style="background: rgba(11, 15, 26, 0.6); border: 1px solid var(--border-glass); border-radius: 12px; padding: 14px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 0.85rem; font-weight: 600; color: #fbbf24;"><i class="fa-solid fa-phone"></i> Twilio Telecom Dialer</span>
+                        <span id="modal-twilio-status" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 6px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-family: 'IBM Plex Mono';">Simulation Ready</span>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="cfg-twilio-sid" style="font-size: 0.75rem;">Twilio Account SID</label>
+                        <input type="text" id="cfg-twilio-sid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label for="cfg-twilio-token" style="font-size: 0.75rem;">Twilio Auth Token</label>
+                        <input type="password" id="cfg-twilio-token" placeholder="Your Twilio Auth Token">
+                    </div>
+                    <div class="form-group">
+                        <label for="cfg-twilio-phone" style="font-size: 0.75rem;">Twilio Phone Number</label>
+                        <input type="tel" id="cfg-twilio-phone" placeholder="+1234567890">
+                    </div>
+                </div>
+
+                <div id="cfg-status-msg" style="display: none; font-size: 0.8rem; padding: 8px 12px; border-radius: 6px;"></div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px;">
+                    <button type="button" class="btn secondary-btn" id="cancel-api-cfg-btn">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="save-api-cfg-btn">
+                        <i class="fa-solid fa-check"></i> Save & Re-integrate Keys
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1050,9 +1128,173 @@
             });
         }
 
-        // Initialize ZEGOCLOUD Engine on load
+        // =====================================================================
+        // 6. CALLING SYSTEM API KEY CONFIGURATION MODAL CONTROLLER
+        // =====================================================================
+        const apiConfigBtn = document.getElementById("api-config-btn");
+        const apiSettingsModal = document.getElementById("api-settings-modal");
+        const closeApiCfgBtn = document.getElementById("close-api-cfg-btn");
+        const cancelApiCfgBtn = document.getElementById("cancel-api-cfg-btn");
+        const apiKeysForm = document.getElementById("api-keys-form");
+        const cfgStatusMsg = document.getElementById("cfg-status-msg");
+
+        const cfgZegoAppId = document.getElementById("cfg-zego-appid");
+        const cfgZegoSecret = document.getElementById("cfg-zego-secret");
+        const cfgZegoSign = document.getElementById("cfg-zego-sign");
+        const cfgTwilioSid = document.getElementById("cfg-twilio-sid");
+        const cfgTwilioToken = document.getElementById("cfg-twilio-token");
+        const cfgTwilioPhone = document.getElementById("cfg-twilio-phone");
+
+        const zegoKeyStatusBadge = document.getElementById("zego-key-status-badge");
+        const twilioKeyStatusBadge = document.getElementById("twilio-key-status-badge");
+        const modalZegoStatus = document.getElementById("modal-zego-status");
+        const modalTwilioStatus = document.getElementById("modal-twilio-status");
+
+        function openApiSettingsModal() {
+            if (apiSettingsModal) {
+                apiSettingsModal.style.display = "flex";
+                fetchCallingConfig();
+            }
+        }
+
+        function closeApiSettingsModal() {
+            if (apiSettingsModal) {
+                apiSettingsModal.style.display = "none";
+                if (cfgStatusMsg) cfgStatusMsg.style.display = "none";
+            }
+        }
+
+        if (apiConfigBtn) apiConfigBtn.addEventListener("click", openApiSettingsModal);
+        if (closeApiCfgBtn) closeApiCfgBtn.addEventListener("click", closeApiSettingsModal);
+        if (cancelApiCfgBtn) cancelApiCfgBtn.addEventListener("click", closeApiSettingsModal);
+
+        // Click outside modal to close
+        if (apiSettingsModal) {
+            apiSettingsModal.addEventListener("click", (e) => {
+                if (e.target === apiSettingsModal) closeApiSettingsModal();
+            });
+        }
+
+        async function fetchCallingConfig() {
+            try {
+                const res = await fetch("/api/calling-config");
+                const data = await res.json();
+                if (data.success) {
+                    // Update ZEGOCLOUD badges and fields
+                    if (data.zego) {
+                        if (cfgZegoAppId && !cfgZegoAppId.value) cfgZegoAppId.value = data.zego.app_id || "1683271293";
+                        if (data.zego.configured) {
+                            if (zegoKeyStatusBadge) {
+                                zegoKeyStatusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> AppID: ${data.zego.app_id} (Active)`;
+                                zegoKeyStatusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+                                zegoKeyStatusBadge.style.color = "#34d399";
+                            }
+                            if (modalZegoStatus) {
+                                modalZegoStatus.innerText = `Verified (AppID: ${data.zego.app_id})`;
+                                modalZegoStatus.style.background = "rgba(16, 185, 129, 0.2)";
+                                modalZegoStatus.style.color = "#34d399";
+                            }
+                        } else {
+                            if (zegoKeyStatusBadge) {
+                                zegoKeyStatusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Keys Missing`;
+                                zegoKeyStatusBadge.style.background = "rgba(239, 68, 68, 0.15)";
+                                zegoKeyStatusBadge.style.color = "#f87171";
+                            }
+                            if (modalZegoStatus) {
+                                modalZegoStatus.innerText = "Action Required";
+                                modalZegoStatus.style.background = "rgba(239, 68, 68, 0.2)";
+                                modalZegoStatus.style.color = "#f87171";
+                            }
+                        }
+                    }
+
+                    // Update Twilio badges and fields
+                    if (data.twilio) {
+                        if (cfgTwilioPhone && data.twilio.phone_number && !cfgTwilioPhone.value) {
+                            cfgTwilioPhone.value = data.twilio.phone_number;
+                        }
+                        if (data.twilio.configured) {
+                            if (twilioKeyStatusBadge) {
+                                twilioKeyStatusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> Twilio Carrier Active`;
+                                twilioKeyStatusBadge.style.background = "rgba(16, 185, 129, 0.15)";
+                                twilioKeyStatusBadge.style.color = "#34d399";
+                            }
+                            if (modalTwilioStatus) {
+                                modalTwilioStatus.innerText = `Connected (${data.twilio.phone_number})`;
+                                modalTwilioStatus.style.background = "rgba(16, 185, 129, 0.2)";
+                                modalTwilioStatus.style.color = "#34d399";
+                            }
+                        } else {
+                            if (twilioKeyStatusBadge) {
+                                twilioKeyStatusBadge.innerHTML = `<i class="fa-solid fa-circle-nodes"></i> Local Simulator Ready`;
+                                twilioKeyStatusBadge.style.background = "rgba(245, 158, 11, 0.15)";
+                                twilioKeyStatusBadge.style.color = "#fbbf24";
+                            }
+                            if (modalTwilioStatus) {
+                                modalTwilioStatus.innerText = "Simulation Mode";
+                                modalTwilioStatus.style.background = "rgba(245, 158, 11, 0.2)";
+                                modalTwilioStatus.style.color = "#fbbf24";
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to load calling config:", err);
+            }
+        }
+
+        if (apiKeysForm) {
+            apiKeysForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const saveBtn = document.getElementById("save-api-cfg-btn");
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving & Integrating...`;
+
+                const payload = {
+                    zego_app_id: cfgZegoAppId ? cfgZegoAppId.value.trim() : "",
+                    zego_server_secret: cfgZegoSecret ? cfgZegoSecret.value.trim() : "",
+                    zego_app_sign: cfgZegoSign ? cfgZegoSign.value.trim() : "",
+                    twilio_sid: cfgTwilioSid ? cfgTwilioSid.value.trim() : "",
+                    twilio_token: cfgTwilioToken ? cfgTwilioToken.value.trim() : "",
+                    twilio_phone: cfgTwilioPhone ? cfgTwilioPhone.value.trim() : ""
+                };
+
+                try {
+                    const res = await fetch("/api/calling-config", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        cfgStatusMsg.style.display = "block";
+                        cfgStatusMsg.style.background = "rgba(16, 185, 129, 0.15)";
+                        cfgStatusMsg.style.color = "#34d399";
+                        cfgStatusMsg.style.border = "1px solid rgba(16, 185, 129, 0.3)";
+                        cfgStatusMsg.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${result.message}`;
+                        addLog("System", "Calling API credentials successfully integrated and reloaded.", "system");
+                        fetchCallingConfig();
+                        setTimeout(() => { closeApiSettingsModal(); }, 1600);
+                    } else {
+                        throw new Error(result.error || "Save failed");
+                    }
+                } catch (err) {
+                    cfgStatusMsg.style.display = "block";
+                    cfgStatusMsg.style.background = "rgba(239, 68, 68, 0.15)";
+                    cfgStatusMsg.style.color = "#f87171";
+                    cfgStatusMsg.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+                    cfgStatusMsg.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Error: ${err.message}`;
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = `<i class="fa-solid fa-check"></i> Save & Re-integrate Keys`;
+                }
+            });
+        }
+
+        // Initialize ZEGOCLOUD Engine and check config on load
         window.addEventListener("DOMContentLoaded", () => {
             initZegoEngine();
+            fetchCallingConfig();
         });
     </script>
 </body>

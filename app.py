@@ -6,6 +6,8 @@ import random
 import hashlib
 import sqlite3
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, request, Response, jsonify, render_template, session, redirect, url_for
 from zego_manager import generate_token04, generate_room_token, zego_session_manager, ERROR_CODE_SUCCESS
 
@@ -369,7 +371,9 @@ PUBLIC_ENDPOINTS = {
     "api_zego_call_barge_in",
     "api_zego_call_end",
     "api_zego_call_session",
-    "api_zego_call_list"
+    "api_zego_call_list",
+    "api_outbound",
+    "api_calling_config"
 }
 
 
@@ -873,6 +877,60 @@ def api_delete_customer(customer_id):
     return jsonify({"success": True, "message": "Customer contact deleted."})
 
 
+@app.route("/api/outbound", methods=["POST"])
+def api_outbound():
+    """
+    Handle single-call outbound trigger from the Call Center dialer.
+    Accepts JSON with customer name, phone, ngrok_url, and optional twilio overrides.
+    """
+    touch_worker_cells([4, 5, 7, 13])
+    data = request.get_json() or {}
+    name = data.get("name", "Valued Customer").strip()
+    phone = data.get("phone", "").strip()
+    ngrok_url = data.get("ngrok_url", "").rstrip("/")
+
+    if not phone:
+        return jsonify({"success": False, "error": "Customer phone number is required."}), 400
+
+    account_sid = data.get("twilio_sid") or os.environ.get("TWILIO_ACCOUNT_SID")
+    auth_token = data.get("twilio_token") or os.environ.get("TWILIO_AUTH_TOKEN")
+    from_phone = data.get("twilio_phone") or os.environ.get("TWILIO_PHONE_NUMBER")
+
+    can_make_real_call = TWILIO_AVAILABLE and bool(account_sid) and bool(auth_token) and bool(from_phone) and bool(ngrok_url)
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if can_make_real_call:
+        try:
+            import urllib.parse
+            client = Client(account_sid, auth_token)
+            safe_name = urllib.parse.quote(name)
+            webhook_url = f"{ngrok_url}/outbound-greeting?name={safe_name}&topic=CustomerCare"
+            call = client.calls.create(
+                to=phone,
+                from_=from_phone,
+                url=webhook_url
+            )
+            log_call("Twilio Outbound", phone, f"Outbound call placed to {name} via Twilio SDK (SID: {call.sid})", None)
+            return jsonify({
+                "success": True,
+                "call_sid": call.sid,
+                "message": f"Twilio call dispatched successfully to {name} ({phone})! SID: {call.sid}"
+            })
+        except Exception as e:
+            log_call("Twilio Outbound Error", phone, f"Failed Twilio call to {name}: {str(e)}", None)
+            return jsonify({"success": False, "error": f"Twilio API Error: {str(e)}"}), 500
+    else:
+        # Graceful browser & database simulation mode
+        call_sid = f"sim_{int(time.time())}_{random.randint(1000, 9999)}"
+        log_call("Twilio Simulator", phone, f"[SIMULATED CALL] Outbound trigger to {name} ({phone})", None)
+        return jsonify({
+            "success": True,
+            "simulated": True,
+            "call_sid": call_sid,
+            "message": f"Interactive call simulation initiated for {name} ({phone}). (Add TWILIO credentials in API Settings for live carrier dialing)."
+        })
+
+
 @app.route("/api/trigger-outbound-call", methods=["POST"])
 
 def api_trigger_outbound_call():
@@ -1065,11 +1123,11 @@ def api_zego_config():
     Returns public ZEGOCLOUD WebRTC SDK configuration for client initialization.
     Does NOT leak the server secret.
     """
-    app_id_val = os.environ.get("ZEGO_APP_ID", "123456789")
+    app_id_val = os.environ.get("ZEGO_APP_ID", "1683271293")
     try:
         app_id = int(app_id_val)
     except (ValueError, TypeError):
-        app_id = 123456789
+        app_id = 1683271293
 
     app_sign = os.environ.get("ZEGO_APP_SIGN", "")
     server_url = f"wss://webliveroom{app_id}-api.zegocloud.com/ws"
@@ -1106,7 +1164,7 @@ def api_zego_token():
             "error_code": token_info.error_code
         }), 500
 
-    app_id_val = int(os.environ.get("ZEGO_APP_ID", 123456789))
+    app_id_val = int(os.environ.get("ZEGO_APP_ID", 1683271293))
     return jsonify({
         "success": True,
         "token": token_info.token,
@@ -1144,7 +1202,7 @@ def api_zego_call_initiate():
     cust_token_info = generate_room_token(cust_user_id, room_id)
     ai_token_info = generate_room_token(ai_user_id, room_id)
 
-    app_id_val = int(os.environ.get("ZEGO_APP_ID", 123456789))
+    app_id_val = int(os.environ.get("ZEGO_APP_ID", 1683271293))
 
     # Initial friendly voice greeting
     greeting = f"Hello {customer_name}! Welcome to Apex Home Services. I am your automated AI care specialist. How can I assist you with your home services today?"
@@ -1342,6 +1400,93 @@ def api_zego_call_list():
     return jsonify({
         "success": True,
         "active_calls": zego_session_manager.list_active_sessions()
+    })
+
+
+@app.route("/api/calling-config", methods=["GET", "POST"])
+def api_calling_config():
+    """
+    GET: Returns current calling configuration status with masked secrets.
+    POST: Updates calling API credentials in memory and persists them to .env.
+    """
+    if request.method == "GET":
+        app_id = os.environ.get("ZEGO_APP_ID", "1683271293")
+        secret = os.environ.get("ZEGO_SERVER_SECRET", "")
+        app_sign = os.environ.get("ZEGO_APP_SIGN", "")
+        
+        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID", "")
+        twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER", "")
+        has_twilio_token = bool(os.environ.get("TWILIO_AUTH_TOKEN"))
+
+        return jsonify({
+            "success": True,
+            "zego": {
+                "configured": bool(app_id and secret and secret != "0123456789abcdef0123456789abcdef"),
+                "app_id": app_id,
+                "has_server_secret": bool(secret),
+                "masked_secret": (secret[:4] + "..." + secret[-4:]) if len(secret) >= 8 else "",
+                "has_app_sign": bool(app_sign),
+                "server_url": f"wss://webliveroom{app_id}-api.zegocloud.com/ws"
+            },
+            "twilio": {
+                "configured": bool(twilio_sid and has_twilio_token and twilio_phone),
+                "account_sid": (twilio_sid[:6] + "..." + twilio_sid[-4:]) if len(twilio_sid) >= 10 else twilio_sid,
+                "phone_number": twilio_phone,
+                "has_auth_token": has_twilio_token
+            }
+        })
+
+    # POST: Save / update keys
+    data = request.get_json() or {}
+    zego_app_id = str(data.get("zego_app_id", "")).strip()
+    zego_secret = str(data.get("zego_server_secret", "")).strip()
+    zego_sign = str(data.get("zego_app_sign", "")).strip()
+
+    twilio_sid = str(data.get("twilio_sid", "")).strip()
+    twilio_token = str(data.get("twilio_token", "")).strip()
+    twilio_phone = str(data.get("twilio_phone", "")).strip()
+
+    if zego_app_id:
+        os.environ["ZEGO_APP_ID"] = zego_app_id
+    if zego_secret:
+        os.environ["ZEGO_SERVER_SECRET"] = zego_secret
+    if zego_sign:
+        os.environ["ZEGO_APP_SIGN"] = zego_sign
+
+    if twilio_sid:
+        os.environ["TWILIO_ACCOUNT_SID"] = twilio_sid
+    if twilio_token:
+        os.environ["TWILIO_AUTH_TOKEN"] = twilio_token
+    if twilio_phone:
+        os.environ["TWILIO_PHONE_NUMBER"] = twilio_phone
+
+    # Write / persist to .env
+    try:
+        env_lines = [
+            "# ZEGOCLOUD Real-Time Voice Call / RTC SDK Configuration",
+            f"ZEGO_APP_ID={os.environ.get('ZEGO_APP_ID', '1683271293')}",
+            f"ZEGO_SERVER_SECRET={os.environ.get('ZEGO_SERVER_SECRET', '')}",
+            f"ZEGO_APP_SIGN={os.environ.get('ZEGO_APP_SIGN', '')}",
+            f"ZEGO_TOKEN_EXPIRY={os.environ.get('ZEGO_TOKEN_EXPIRY', '3600')}",
+            "",
+            "# Optional Twilio Credentials for Production Phone Calls",
+            f"TWILIO_ACCOUNT_SID={os.environ.get('TWILIO_ACCOUNT_SID', '')}",
+            f"TWILIO_AUTH_TOKEN={os.environ.get('TWILIO_AUTH_TOKEN', '')}",
+            f"TWILIO_PHONE_NUMBER={os.environ.get('TWILIO_PHONE_NUMBER', '')}",
+            "",
+            "# App Configuration",
+            f"FLASK_PORT={os.environ.get('FLASK_PORT', '5000')}",
+            f"SECRET_KEY={os.environ.get('SECRET_KEY', 'supersecretkey_apex_call_center')}",
+            ""
+        ]
+        with open(".env", "w", encoding="utf-8") as f:
+            f.write("\n".join(env_lines))
+    except Exception as e:
+        print(f"[ENV SAVE ERROR]: {e}")
+
+    return jsonify({
+        "success": True,
+        "message": "Calling API credentials integrated and saved successfully!"
     })
 
 

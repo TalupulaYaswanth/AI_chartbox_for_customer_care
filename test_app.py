@@ -1,3 +1,4 @@
+import os
 import unittest
 from app import app, get_db, init_db, search_database
 
@@ -410,6 +411,42 @@ class VoiceLocatorTestCase(unittest.TestCase):
         })
         self.assertEqual(exit_chat.status_code, 200)
         self.assertTrue(exit_chat.get_json()['call_ended'])
+
+    def test_25_api_outbound_dialer(self):
+        """Test Call Center single-call outbound dialer endpoint with validation and simulation."""
+        # Missing phone number returns 400
+        fail_res = self.client.post('/api/outbound', json={"name": "Alice"})
+        self.assertEqual(fail_res.status_code, 400)
+        self.assertFalse(fail_res.get_json()['success'])
+
+        # Valid payload triggers outbound call simulation
+        success_res = self.client.post('/api/outbound', json={
+            "name": "Sarah Connor",
+            "phone": "+15554321098"
+        })
+        self.assertEqual(success_res.status_code, 200)
+        data = success_res.get_json()
+        self.assertTrue(data['success'])
+        self.assertIn("sim", data['call_sid'])
+
+    def test_26_calling_config_api(self):
+        """Test calling API configuration status inspection and live key update."""
+        # GET calling config
+        get_res = self.client.get('/api/calling-config')
+        self.assertEqual(get_res.status_code, 200)
+        data = get_res.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['zego']['app_id'], '1683271293')
+        self.assertTrue(data['zego']['configured'])
+
+        # POST update keys
+        post_res = self.client.post('/api/calling-config', json={
+            "zego_app_id": "1683271293",
+            "zego_server_secret": os.environ.get("ZEGO_SERVER_SECRET", "0123456789abcdef0123456789abcdef"),
+            "twilio_phone": "+15559876543"
+        })
+        self.assertEqual(post_res.status_code, 200)
+        self.assertTrue(post_res.get_json()['success'])
 
 if __name__ == '__main__':
     unittest.main()

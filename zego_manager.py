@@ -145,11 +145,11 @@ def generate_room_token(user_id: str, room_id: str = None, effective_time: int =
     Reads ZEGO_APP_ID and ZEGO_SERVER_SECRET from environment variables,
     with safe development sandbox fallbacks.
     """
-    app_id_str = os.environ.get("ZEGO_APP_ID", "123456789")
+    app_id_str = os.environ.get("ZEGO_APP_ID", "1683271293")
     try:
         app_id = int(app_id_str)
     except (ValueError, TypeError):
-        app_id = 123456789
+        app_id = 1683271293
 
     secret = os.environ.get("ZEGO_SERVER_SECRET", "0123456789abcdef0123456789abcdef")
     if len(secret) != 32:
