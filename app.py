@@ -888,6 +888,11 @@ def api_outbound():
     name = data.get("name", "Valued Customer").strip()
     phone = data.get("phone", "").strip()
     ngrok_url = data.get("ngrok_url", "").rstrip("/")
+    if not ngrok_url:
+        host_url = request.host_url.rstrip("/")
+        if "onrender.com" in host_url and host_url.startswith("http://"):
+            host_url = host_url.replace("http://", "https://")
+        ngrok_url = host_url
 
     if not phone:
         return jsonify({"success": False, "error": "Customer phone number is required."}), 400
