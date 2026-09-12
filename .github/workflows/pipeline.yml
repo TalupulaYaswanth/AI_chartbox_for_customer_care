@@ -1,0 +1,82 @@
+name: AI Call Center CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Automated Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Upgrade Pip & Install Build Tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+
+      - name: Install Project Dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Code Syntax & Compilation Verification
+        run: |
+          python -m compileall -q .
+          echo "All Python source files compiled and syntax validated successfully."
+
+      - name: Initialize & Validate SQLite Database
+        run: |
+          python -c "import app; app.init_db(); print('SQLite database initialized successfully.')"
+
+      - name: Run Unit Test Suite
+        env:
+          ZEGO_APP_ID: "1683271293"
+          ZEGO_SERVER_SECRET: "cb1713590fdbd9d8bdfbec9ebb246c52"
+          ZEGO_APP_SIGN: "a800ad206d5ea01ea09da127894b24b5"
+          FLASK_PORT: "5000"
+          SECRET_KEY: "ci-testing-secret-key"
+        run: |
+          python -m unittest -v test_app.py
+
+  maven-pom-check:
+    name: Maven POM & Dependency Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "maven"
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Python Dependencies for Maven Exec Plugin
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Maven POM Lifecycle
+        run: |
+          mvn --version
+          mvn test-compile
